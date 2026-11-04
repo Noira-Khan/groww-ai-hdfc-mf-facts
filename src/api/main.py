@@ -23,8 +23,7 @@ from src.config import Config, load_config, masked_dict, validate_runtime
 from src.logging import get_logger, safe_log
 from src.rag.pipeline import answer_question
 from src.safety import responses
-from src.safety.intent import SCHEME_LABELS, classify_question
-from src.safety.pii import detect_pii
+from src.services.chat import ChatUnavailableError, process_question
 from src.store.chroma import get_collection
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -321,58 +320,36 @@ def create_app(config: Config | None = None, warmup: bool = True) -> FastAPI:
                 content=responses.error_response(request_id),
             )
 
-        route = "answer"
-        if cfg.safety.detect_pii and detect_pii(question):
-            route = "pii"
-            envelope = responses.pii_response(request_id)
-        else:
-            intent = classify_question(question, payload.scheme)
-            route = intent.route
-            if intent.route == "refusal_advice":
-                envelope = responses.advice_response(request_id)
-            elif intent.route == "refusal_performance":
-                envelope = responses.performance_response(request_id)
-            elif intent.route == "not_in_sources":
-                envelope = responses.not_in_sources_response(request_id)
-            elif intent.route == "clarify":
-                envelope = responses.clarify_response(question, request_id)
-            else:
-                scheme = intent.first_scheme if intent.scheme_sensitive else None
-                try:
-                    envelope = answer_question(
-                        cfg,
-                        question,
-                        scheme=scheme,
-                        model=get_model(cfg),
-                    )
-                    if envelope.get("type") == "answer" and intent.extra_schemes:
-                        envelope["can_do"] = [
-                            f"What about {SCHEME_LABELS[item]}?"
-                            for item in intent.extra_schemes
-                        ]
-                except ValueError:
-                    safe_log(
-                        logger,
-                        "chat_unavailable",
-                        request_id=request_id,
-                        route=route,
-                    )
-                    return JSONResponse(
-                        status_code=503,
-                        content=responses.error_response(request_id),
-                    )
-                except Exception:
-                    envelope = responses.error_response(request_id)
+        try:
+            result = process_question(
+                cfg,
+                question,
+                payload.scheme,
+                model=get_model(cfg),
+                answer_fn=answer_question,
+                request_id=request_id,
+            )
+        except ChatUnavailableError:
+            safe_log(
+                logger,
+                "chat_unavailable",
+                request_id=request_id,
+                route="answer",
+            )
+            return JSONResponse(
+                status_code=503,
+                content=responses.error_response(request_id),
+            )
 
         _log_chat(
             request_id,
-            envelope["type"],
-            route,
+            result.envelope["type"],
+            result.route,
             started,
             cfg,
-            envelope.get("chunks_used"),
+            result.envelope.get("chunks_used"),
         )
-        return envelope
+        return result.envelope
 
     @app.get("/api/sources")
     async def sources():

@@ -17,4 +17,5 @@ openai
 anthropic
 mistralai
 tenacity
+streamlit>=1.40,<2.0
 pytest

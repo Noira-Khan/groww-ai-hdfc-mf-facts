@@ -23,8 +23,10 @@ A facts-only assistant for a small, curated set of HDFC Mutual Fund schemes. It 
 ## Architecture
 
 ```
-ui/                 One-page chat UI
+streamlit_app.py    Streamlit frontend
+ui/                 One-page chat UI (FastAPI)
 src/api/main.py     FastAPI app and guard order
+src/services/       Shared question processing and knowledge-base init
 src/safety/         PII detection, intent routing, fixed responses
 src/rag/            Retrieval, prompt generation, validation, cache, pipeline
 src/ingest/         Source loading, normalization, chunking, embeddings, Chroma index
@@ -35,7 +37,7 @@ data/artifacts/     Generated corpus, Chroma index, and cache (gitignored)
 data/eval/          Generated evaluation results
 ```
 
-The request path is: PII check -> intent routing -> retrieval -> generation -> deterministic validation -> cache. Only validated factual answers are cached.
+The request path is: PII check -> intent routing -> retrieval -> generation -> deterministic validation -> cache. Only validated factual answers are cached. Both the FastAPI and Streamlit frontends use `src/services/chat.py`, so the guard order and response envelopes are identical.
 
 ## Setup
 
@@ -83,6 +85,34 @@ uvicorn src.api.main:app --host 127.0.0.1 --port 8000
 ```
 
 Open `http://127.0.0.1:8000/` for the UI.
+
+## Streamlit frontend
+
+The Streamlit app reuses the same safety, retrieval, generation, validation, and citation logic as the API.
+
+```powershell
+streamlit run streamlit_app.py
+```
+
+The app opens an existing, valid Chroma collection. If the corpus or index is missing, it runs the ingestion pipeline once and caches the initialized resources for the server process. Later reruns do not rebuild the index.
+
+For Streamlit Community Cloud, add these secrets in the app dashboard:
+
+```toml
+GROQ_API_KEY = "your_groq_key_here"
+LLM_MODEL_ID = "openai/gpt-oss-120b"
+# CACHE_SALT = "optional-random-salt"
+# HF_TOKEN = "optional-hugging-face-token"
+```
+
+Do not commit `.streamlit/secrets.toml`; use `.streamlit/secrets.toml.example` as the template. Locally, `.env` continues to work.
+
+Streamlit Community Cloud notes:
+
+- `data/artifacts/` is generated and is not committed, so the first cold start downloads official documents and the embedding model. This can take several minutes and needs outbound network access.
+- The filesystem is ephemeral; a restarted or redeployed app rebuilds the corpus and index. Use a persistent external vector store if that cost matters.
+- The runtime image must have enough memory for `sentence-transformers`, PyTorch, and ChromaDB.
+- Streamlit Community Cloud runs the Streamlit app only. The FastAPI JSON API and the static `ui/` page remain available when deployed separately.
 
 API endpoints:
 
