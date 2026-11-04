@@ -18,6 +18,8 @@ from src.logging import get_logger, safe_log
 
 MAX_BYTES = 40 * 1024 * 1024
 RETRYABLE_STATUS = {408, 425, 429, 500, 502, 503, 504}
+MAX_BACKOFF_S = 30.0
+FetchProgress = Callable[[int, int, "FetchResult"], None]
 
 
 class RetryableStatus(Exception):
@@ -45,6 +47,12 @@ class FetchResult:
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _timeout(config: Config) -> httpx.Timeout:
+    """Fail fast on unreachable hosts while keeping the configured read timeout."""
+    read_timeout = float(config.ingestion.request_timeout_s)
+    return httpx.Timeout(read_timeout, connect=min(10.0, read_timeout))
 
 
 def _safe_name(source_id: str) -> str:
@@ -87,7 +95,7 @@ def fetch_source(
     owns_client = client is None
     if client is None:
         client = httpx.Client(
-            timeout=config.ingestion.request_timeout_s,
+            timeout=_timeout(config),
             follow_redirects=True,
             headers={"User-Agent": config.ingestion.user_agent},
         )
@@ -109,11 +117,14 @@ def fetch_source(
                 if len(data) > MAX_BYTES:
                     return _failed(spec, f"response exceeds {MAX_BYTES} bytes", response.status_code)
                 break
-            except (httpx.TimeoutException, httpx.NetworkError, RetryableStatus) as exc:
+            except (httpx.TransportError, RetryableStatus) as exc:
                 last_error = f"{type(exc).__name__}: {exc}"
                 if attempt >= attempts:
                     return _failed(spec, last_error)
-                sleep_fn((config.ingestion.request_delay_ms / 1000) * (2 ** (attempt - 1)))
+                backoff = (config.ingestion.request_delay_ms / 1000) * (
+                    2 ** (attempt - 1)
+                )
+                sleep_fn(min(MAX_BACKOFF_S, backoff))
             except httpx.HTTPError as exc:
                 return _failed(spec, f"{type(exc).__name__}: {exc}")
 
@@ -148,12 +159,13 @@ def fetch_all(
     config: Config,
     fail_fast: bool = False,
     sleep_fn: Callable[[float], None] = time.sleep,
+    on_progress: FetchProgress | None = None,
 ) -> list[FetchResult]:
     results: list[FetchResult] = []
     logger = get_logger("ingest.loader")
 
     with httpx.Client(
-        timeout=config.ingestion.request_timeout_s,
+        timeout=_timeout(config),
         follow_redirects=True,
         headers={"User-Agent": config.ingestion.user_agent},
     ) as client:
@@ -172,6 +184,12 @@ def fetch_all(
                 http_status=result.http_status,
                 bytes=result.bytes,
             )
+            if on_progress is not None:
+                try:
+                    on_progress(len(results), len(specs), result)
+                except Exception:
+                    # Progress reporting must never break ingestion.
+                    pass
 
             if result.status != "ok" and fail_fast:
                 break
@@ -247,6 +265,7 @@ def run_load(
     only: list[str] | None = None,
     dry_run: bool = False,
     fail_fast: bool = False,
+    on_progress: FetchProgress | None = None,
 ) -> dict:
     inventory_file = Path(inventory_path)
     if not inventory_file.is_absolute():
@@ -268,7 +287,9 @@ def run_load(
             "sources": [asdict(spec) for spec in specs],
         }
 
-    results = fetch_all(specs, config, fail_fast=fail_fast)
+    results = fetch_all(
+        specs, config, fail_fast=fail_fast, on_progress=on_progress
+    )
     if only:
         results = merge_with_existing(results, config)
     manifest = build_manifest(results, config)

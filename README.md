@@ -41,13 +41,15 @@ The request path is: PII check -> intent routing -> retrieval -> generation -> d
 
 ## Setup
 
-Python 3.11+ is recommended. The project has been run with Python 3.13 on Windows.
+Python 3.11+ is supported. The dependency set in `requirements.txt` is pinned and tested on **Python 3.13.0** (Windows). For Streamlit Community Cloud, select **Python 3.13** in the app's **Advanced settings**; Community Cloud does not honor `runtime.txt` for this. Python 3.12 is expected to work with these pins, but the verified test run is on 3.13.0.
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
 ```
+
+Use `requirements.txt` for deployment and `requirements-dev.txt` when you also need `pytest`.
 
 Create a `.env` file in the project root:
 
@@ -94,7 +96,7 @@ The Streamlit app reuses the same safety, retrieval, generation, validation, and
 streamlit run streamlit_app.py
 ```
 
-The app opens an existing, valid Chroma collection. If the corpus or index is missing, it runs the ingestion pipeline once and caches the initialized resources for the server process. Later reruns do not rebuild the index.
+The app shell renders immediately. Configuration is loaded quickly, and the embedding model and knowledge base are initialized only when needed. If the corpus or index is missing, the page shows an **Initialize knowledge base** panel with stage-by-stage progress (model, download X/19, normalize, chunk, embed, index, validate). The model and initialized resources are cached for the server process, and later reruns do not rebuild a valid Chroma index.
 
 For Streamlit Community Cloud, add these secrets in the app dashboard:
 
@@ -109,8 +111,11 @@ Do not commit `.streamlit/secrets.toml`; use `.streamlit/secrets.toml.example` a
 
 Streamlit Community Cloud notes:
 
-- `data/artifacts/` is generated and is not committed, so the first cold start downloads official documents and the embedding model. This can take several minutes and needs outbound network access.
+- Select **Python 3.13** in **Advanced settings**. `runtime.txt` is not used by Community Cloud for Python version selection. The pinned dependency set is tested on Python 3.13.0.
+- After changing the Python version or `requirements.txt`, use **Manage app → Reboot** (or clear the app cache) so Community Cloud reinstalls the environment.
+- `data/artifacts/` is generated and is not committed, so the first cold start downloads official documents and the embedding model. This can take several minutes and needs outbound network access. The UI reports each initialization stage.
 - The filesystem is ephemeral; a restarted or redeployed app rebuilds the corpus and index. Use a persistent external vector store if that cost matters.
+- `requirements.txt` requests the CPU-only PyTorch wheel (`torch==2.15.0+cpu`) from the PyTorch CPU index. This avoids downloading the large NVIDIA CUDA packages on Community Cloud's Linux runtime. The corpus uses `device: cpu` in `config.yaml`.
 - The runtime image must have enough memory for `sentence-transformers`, PyTorch, and ChromaDB.
 - Streamlit Community Cloud runs the Streamlit app only. The FastAPI JSON API and the static `ui/` page remain available when deployed separately.
 

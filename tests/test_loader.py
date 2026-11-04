@@ -236,6 +236,42 @@ def test_fetch_all_fail_fast(config, server):
     assert results[0].status == "failed"
 
 
+def test_fetch_all_reports_progress(config, server):
+    events = []
+    specs = [
+        spec("test_first", f"{server}/ok.html"),
+        spec("test_second", f"{server}/missing"),
+    ]
+
+    fetch_all(
+        specs,
+        config,
+        sleep_fn=lambda _: None,
+        on_progress=lambda completed, total, result: events.append(
+            (completed, total, result.source_id, result.status)
+        ),
+    )
+
+    assert events == [
+        (1, 2, "test_first", "ok"),
+        (2, 2, "test_second", "failed"),
+    ]
+
+
+def test_progress_callback_errors_do_not_break_fetch(config, server):
+    def broken(*args):
+        raise RuntimeError("ui callback failed")
+
+    results = fetch_all(
+        [spec("test_ok", f"{server}/ok.html")],
+        config,
+        sleep_fn=lambda _: None,
+        on_progress=broken,
+    )
+
+    assert results[0].status == "ok"
+
+
 def test_merge_with_existing_keeps_prior_sources(config, server):
     prior = fetch_source(spec("prior_ok", f"{server}/ok.html"), config, sleep_fn=lambda _: None)
     write_manifest(build_manifest([prior], config), config)
