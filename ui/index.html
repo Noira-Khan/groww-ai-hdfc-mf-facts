@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Facts-only answers about HDFC Mutual Fund schemes, cited from official sources."
+    />
+    <title>HDFC MF Facts | Groww AI</title>
+    <link rel="stylesheet" href="/ui/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <div class="header-left">
+          <a class="brand" href="/" aria-label="Groww AI home">
+            GROWW <span>AI</span><i class="brand-dot" aria-hidden="true"></i>
+            <small class="brand-product">HDFC MF Facts</small>
+          </a>
+          <p class="tagline">Mutual fund facts, made clear</p>
+        </div>
+
+        <nav class="main-nav" aria-label="Primary">
+          <a href="#assistant">Assistant</a>
+          <a href="#schemes">Schemes</a>
+          <button type="button" data-open-modal="sources">Sources</button>
+          <button type="button" data-open-modal="pipeline">Pipeline</button>
+        </nav>
+
+        <p class="facts-note">Facts-only. No investment advice.</p>
+      </header>
+
+      <main>
+        <section class="hero" id="assistant">
+          <p class="eyebrow">YOUR MUTUAL FUND FACT DESK</p>
+          <h1>Investing terms<br /><span>made clearer.</span></h1>
+          <p class="welcome">Hi! Ask me facts about HDFC Mutual Fund schemes.</p>
+          <p class="hero-copy">
+            Understand scheme documents, SID, KIM, and mutual-fund terms in plain
+            language. Every answer cites an official HDFC AMC, SEBI, or AMFI source.
+          </p>
+
+          <div class="scheme-section" id="schemes">
+            <div class="section-heading">
+              <h2>Choose a scheme <span>(optional)</span></h2>
+              <p>Tap to add context</p>
+            </div>
+            <div class="scheme-chips" role="group" aria-label="Scheme filter">
+              <button class="chip" type="button" data-scheme="large_cap" aria-pressed="false">
+                <i class="dot dot-large" aria-hidden="true"></i>Large Cap
+              </button>
+              <button class="chip" type="button" data-scheme="flexi_cap" aria-pressed="false">
+                <i class="dot dot-flexi" aria-hidden="true"></i>Flexi Cap
+              </button>
+              <button class="chip" type="button" data-scheme="elss" aria-pressed="false">
+                <i class="dot dot-elss" aria-hidden="true"></i>ELSS Tax Saver
+              </button>
+              <button class="chip" type="button" data-scheme="mid_cap" aria-pressed="false">
+                <i class="dot dot-mid" aria-hidden="true"></i>Mid Cap
+              </button>
+              <button class="chip" type="button" data-scheme="small_cap" aria-pressed="false">
+                <i class="dot dot-small" aria-hidden="true"></i>Small Cap
+              </button>
+            </div>
+          </div>
+
+          <div class="examples">
+            <div class="section-heading">
+              <h2>Try asking</h2>
+              <p>Example questions</p>
+            </div>
+            <div class="example-grid">
+              <button
+                class="example"
+                type="button"
+                data-question="What is NAV in a mutual fund?"
+              >
+                What is NAV in a mutual fund?
+              </button>
+              <button
+                class="example"
+                type="button"
+                data-question="What is the lock-in period of HDFC ELSS Tax Saver?"
+              >
+                What is the lock-in period of HDFC ELSS Tax Saver?
+              </button>
+              <button
+                class="example"
+                type="button"
+                data-question="What is the riskometer of HDFC Small Cap Fund?"
+              >
+                What is the riskometer of HDFC Small Cap Fund?
+              </button>
+              <button
+                class="example"
+                type="button"
+                data-question="What is the benchmark of HDFC Large Cap Fund?"
+              >
+                What is the benchmark of HDFC Large Cap Fund?
+              </button>
+              <button
+                class="example"
+                type="button"
+                data-question="How do I download my capital-gains statement?"
+              >
+                How do I download my capital-gains statement?
+              </button>
+              <button
+                class="example"
+                type="button"
+                data-question="What is the exit load of HDFC Flexi Cap Fund?"
+              >
+                What is the exit load of HDFC Flexi Cap Fund?
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="answer-section" aria-live="polite" aria-atomic="false">
+          <div class="answer-empty" id="answer-root">
+            <p>Your answer will appear here</p>
+          </div>
+        </section>
+      </main>
+
+      <div class="input-dock">
+        <form class="chat-form" id="chat-form">
+          <div class="input-wrap">
+            <label class="sr-only" for="question-input">Ask a question</label>
+            <input
+              id="question-input"
+              name="question"
+              type="text"
+              maxlength="2000"
+              autocomplete="off"
+              placeholder="Ask Groww AI a question about mutual funds..."
+            />
+            <button class="send-button" type="submit" id="send-button" aria-label="Ask question">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h13M12 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+          <p class="helper">
+            Facts-only. No personal info please (PAN, Aadhaar, phone, email, OTP).
+          </p>
+        </form>
+      </div>
+
+      <footer class="site-footer">
+        <div class="compliance-row">
+          <p class="compliance-label">OFFICIAL COMPLIANCE &amp; DATA STANDARDS</p>
+          <div class="compliance-links">
+            <a href="https://www.hdfcfund.com/" target="_blank" rel="noopener noreferrer">
+              AMC Disclosures
+            </a>
+            <a href="https://www.sebi.gov.in/" target="_blank" rel="noopener noreferrer">
+              SEBI Regulations
+            </a>
+            <a href="https://www.amfiindia.com/" target="_blank" rel="noopener noreferrer">
+              AMFI Code of Conduct
+            </a>
+          </div>
+        </div>
+        <p class="disclaimer" id="disclaimer">
+          This assistant shares factual information from official AMC, SEBI and AMFI
+          sources only. It does not provide investment advice, recommendations or
+          performance comparisons. Mutual fund investments are subject to market risks;
+          read all scheme-related documents carefully.
+        </p>
+      </footer>
+    </div>
+
+    <div class="modal" id="sources-modal" hidden>
+      <div class="modal-backdrop" data-close-modal></div>
+      <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="sources-title">
+        <header class="modal-header">
+          <div>
+            <p class="eyebrow">SOURCE INVENTORY</p>
+            <h2 id="sources-title">Official sources</h2>
+          </div>
+          <button class="icon-button" type="button" data-close-modal aria-label="Close">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </header>
+        <div class="modal-body" id="sources-body">
+          <p class="muted">Loading official sources…</p>
+        </div>
+      </section>
+    </div>
+
+    <div class="modal" id="pipeline-modal" hidden>
+      <div class="modal-backdrop" data-close-modal></div>
+      <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="pipeline-title">
+        <header class="modal-header">
+          <div>
+            <p class="eyebrow">PIPELINE ARTIFACTS</p>
+            <h2 id="pipeline-title">How the answer is built</h2>
+          </div>
+          <button class="icon-button" type="button" data-close-modal aria-label="Close">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </header>
+        <div class="modal-body" id="pipeline-body">
+          <p class="muted">Loading pipeline summaries…</p>
+        </div>
+      </section>
+    </div>
+
+    <script src="/ui/app.js" defer></script>
+  </body>
+</html>

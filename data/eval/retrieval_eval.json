@@ -1,0 +1,308 @@
+{
+  "suite": "retrieval",
+  "generated_at": "2026-11-03T06:38:36+00:00",
+  "summary": {
+    "total": 11,
+    "hits": 11,
+    "recall_at_5": 1.0,
+    "threshold": 0.85,
+    "pass": true
+  },
+  "cases": [
+    {
+      "id": "F01",
+      "expected_source_ids": [
+        "hdfc_flexi_cap_page",
+        "hdfc_flexi_cap_kim"
+      ],
+      "hit": true,
+      "candidate_source_ids": [
+        "hdfc_flexi_cap_page",
+        "hdfc_flexi_cap_kim",
+        "hdfc_flexi_cap_kim",
+        "hdfc_flexi_cap_page",
+        "hdfc_flexi_cap_kim"
+      ],
+      "selected_source_ids": [
+        "",
+        "",
+        ""
+      ],
+      "candidate_scores": [
+        0.8597,
+        0.7926,
+        0.7757,
+        0.7734,
+        0.7677
+      ]
+    },
+    {
+      "id": "F02",
+      "expected_source_ids": [
+        "hdfc_elss_kim",
+        "hdfc_elss_page",
+        "amfi_elss_categorisation"
+      ],
+      "hit": true,
+      "candidate_source_ids": [
+        "hdfc_elss_page",
+        "hdfc_elss_kim",
+        "hdfc_elss_kim",
+        "hdfc_elss_kim",
+        "hdfc_elss_kim"
+      ],
+      "selected_source_ids": [
+        "",
+        "",
+        ""
+      ],
+      "candidate_scores": [
+        0.8373,
+        0.7381,
+        0.7363,
+        0.7335,
+        0.7232
+      ]
+    },
+    {
+      "id": "F03",
+      "expected_source_ids": [
+        "hdfc_large_cap_page"
+      ],
+      "hit": true,
+      "candidate_source_ids": [
+        "hdfc_large_cap_page",
+        "hdfc_large_cap_kim",
+        "hdfc_large_cap_kim",
+        "hdfc_large_cap_kim",
+        "hdfc_large_cap_page"
+      ],
+      "selected_source_ids": [
+        "",
+        "",
+        ""
+      ],
+      "candidate_scores": [
+        0.8708,
+        0.714,
+        0.7124,
+        0.696,
+        0.6918
+      ]
+    },
+    {
+      "id": "F04",
+      "expected_source_ids": [
+        "hdfc_mid_cap_page",
+        "hdfc_mid_cap_kim"
+      ],
+      "hit": true,
+      "candidate_source_ids": [
+        "hdfc_mid_cap_page",
+        "hdfc_mid_cap_kim",
+        "hdfc_mid_cap_kim",
+        "hdfc_mid_cap_kim",
+        "hdfc_mid_cap_page"
+      ],
+      "selected_source_ids": [
+        "",
+        "",
+        ""
+      ],
+      "candidate_scores": [
+        0.8369,
+        0.7884,
+        0.7627,
+        0.7583,
+        0.7535
+      ]
+    },
+    {
+      "id": "F05",
+      "expected_source_ids": [
+        "hdfc_large_cap_page",
+        "hdfc_large_cap_kim"
+      ],
+      "hit": true,
+      "candidate_source_ids": [
+        "hdfc_large_cap_page",
+        "hdfc_large_cap_kim",
+        "hdfc_large_cap_kim",
+        "hdfc_large_cap_kim",
+        "hdfc_large_cap_kim"
+      ],
+      "selected_source_ids": [
+        "",
+        "",
+        ""
+      ],
+      "candidate_scores": [
+        0.8823,
+        0.8486,
+        0.8246,
+        0.8206,
+        0.7972
+      ]
+    },
+    {
+      "id": "F06",
+      "expected_source_ids": [
+        "hdfc_mid_cap_page",
+        "hdfc_mid_cap_kim"
+      ],
+      "hit": true,
+      "candidate_source_ids": [
+        "hdfc_mid_cap_kim",
+        "hdfc_mid_cap_page",
+        "hdfc_mid_cap_page",
+        "hdfc_mid_cap_page",
+        "hdfc_mid_cap_kim"
+      ],
+      "selected_source_ids": [
+        "",
+        "",
+        ""
+      ],
+      "candidate_scores": [
+        0.8208,
+        0.8199,
+        0.7945,
+        0.7762,
+        0.7732
+      ]
+    },
+    {
+      "id": "F07",
+      "expected_source_ids": [
+        "hdfc_statement_guide",
+        "hdfc_faq"
+      ],
+      "hit": true,
+      "candidate_source_ids": [
+        "hdfc_statement_guide",
+        "hdfc_large_cap_kim",
+        "hdfc_statement_guide",
+        "hdfc_statement_guide",
+        "sebi_investor_booklet"
+      ],
+      "selected_source_ids": [
+        "",
+        "",
+        ""
+      ],
+      "candidate_scores": [
+        0.4794,
+        0.4015,
+        0.4393,
+        0.4128,
+        0.4105
+      ]
+    },
+    {
+      "id": "F08",
+      "expected_source_ids": [
+        "hdfc_elss_page",
+        "hdfc_elss_kim"
+      ],
+      "hit": true,
+      "candidate_source_ids": [
+        "hdfc_elss_page",
+        "hdfc_elss_kim",
+        "hdfc_elss_kim",
+        "hdfc_elss_kim",
+        "hdfc_elss_page"
+      ],
+      "selected_source_ids": [
+        "",
+        "",
+        ""
+      ],
+      "candidate_scores": [
+        0.8061,
+        0.7768,
+        0.7536,
+        0.7462,
+        0.7429
+      ]
+    },
+    {
+      "id": "M01",
+      "expected_source_ids": [
+        "hdfc_flexi_cap_page",
+        "hdfc_flexi_cap_kim"
+      ],
+      "hit": true,
+      "candidate_source_ids": [
+        "hdfc_flexi_cap_page",
+        "hdfc_flexi_cap_kim",
+        "hdfc_flexi_cap_kim",
+        "hdfc_flexi_cap_kim",
+        "hdfc_flexi_cap_page"
+      ],
+      "selected_source_ids": [
+        "",
+        "",
+        ""
+      ],
+      "candidate_scores": [
+        0.8452,
+        0.7935,
+        0.7829,
+        0.7725,
+        0.7719
+      ]
+    },
+    {
+      "id": "M02",
+      "expected_source_ids": [
+        "hdfc_large_cap_page"
+      ],
+      "hit": true,
+      "candidate_source_ids": [
+        "hdfc_large_cap_page",
+        "hdfc_large_cap_page",
+        "hdfc_large_cap_kim",
+        "hdfc_large_cap_page",
+        "hdfc_large_cap_kim"
+      ],
+      "selected_source_ids": [
+        "",
+        "",
+        ""
+      ],
+      "candidate_scores": [
+        0.8183,
+        0.6926,
+        0.6786,
+        0.6642,
+        0.6537
+      ]
+    },
+    {
+      "id": "M03",
+      "expected_source_ids": [
+        "hdfc_mid_cap_page"
+      ],
+      "hit": true,
+      "candidate_source_ids": [
+        "hdfc_mid_cap_page",
+        "hdfc_mid_cap_kim",
+        "hdfc_mid_cap_kim",
+        "hdfc_mid_cap_kim",
+        "hdfc_mid_cap_kim"
+      ],
+      "selected_source_ids": [
+        "",
+        "",
+        ""
+      ],
+      "candidate_scores": [
+        0.8923,
+        0.8457,
+        0.8297,
+        0.8093,
+        0.7917
+      ]
+    }
+  ]
+}

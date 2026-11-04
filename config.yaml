@@ -1,0 +1,49 @@
+app:
+  name: "HDFC MF Facts"
+  disclaimer: "Facts-only. No investment advice."
+  max_answer_sentences: 3
+  artifact_dir: "data/artifacts"
+
+ingestion:
+  allowlist_publishers: [HDFC AMC, SEBI, AMFI]
+  request_timeout_s: 30
+  max_retries: 3
+  request_delay_ms: 800
+  user_agent: "Mozilla/5.0 (compatible; HDFC-MF-Facts-Prototype/1.0)"
+
+chunking:
+  planner: "auto"          # auto | section_aware | recursive | fixed
+  target_tokens: 800
+  overlap_tokens: 120
+  keep_tables_intact: true
+
+embedding:
+  model: "sentence-transformers/all-MiniLM-L6-v2"
+  normalize: true
+  batch_size: 32
+  device: "cpu"
+  max_seq_tokens: 256
+
+vector_store:
+  provider: "chroma"
+  path: "data/artifacts/chroma"
+  collection: "hdfc_mf_facts"
+  distance: "cosine"
+  rebuild: false
+
+retrieval:
+  top_k: 5
+  score_threshold: 0.35
+  max_context_chunks: 3
+
+llm:
+  provider: "groq"               # groq | gemini | openai | anthropic | mistral
+  model: "${LLM_MODEL_ID}"       # from .env, validated at startup
+  temperature: 0.1
+  max_tokens: 400
+  timeout_s: 30
+
+safety:
+  detect_pii: true
+  max_repair_retries: 1
+  cache_answers: true

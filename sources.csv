@@ -1,0 +1,20 @@
+source_id,url,publisher,doc_type,scheme,title,expected_topics
+hdfc_large_cap_page,https://www.hdfcfund.com/explore/mutual-funds/hdfc-large-cap-fund/regular,HDFC AMC,scheme_page,large_cap,HDFC Large Cap Fund scheme page,expense_ratio|exit_load|min_sip|riskometer|benchmark
+hdfc_flexi_cap_page,https://www.hdfcfund.com/explore/mutual-funds/hdfc-flexi-cap-fund/regular,HDFC AMC,scheme_page,flexi_cap,HDFC Flexi Cap Fund scheme page,expense_ratio|exit_load|min_sip|riskometer|benchmark
+hdfc_elss_page,https://www.hdfcfund.com/explore/mutual-funds/hdfc-elss-tax-saver-fund/direct,HDFC AMC,scheme_page,elss,HDFC ELSS Tax Saver Fund scheme page,elss_lockin|expense_ratio|exit_load|min_sip
+hdfc_mid_cap_page,https://www.hdfcfund.com/explore/mutual-funds/hdfc-mid-cap-fund/regular,HDFC AMC,scheme_page,mid_cap,HDFC Mid Cap Fund scheme page,expense_ratio|exit_load|min_sip|riskometer|benchmark
+hdfc_large_cap_kim,https://files.hdfcfund.com/s3fs-public/KIM/2025-11/KIM%20-%20HDFC%20Large%20Cap%20Fund%20dated%20November%2021%2C%202025_0.pdf?VersionId=XuOtUPPEfOmbQpuzxBMGCAdqsTmowMh4,HDFC AMC,kim,large_cap,HDFC Large Cap Fund KIM,expense_ratio|exit_load|min_sip|riskometer|benchmark
+hdfc_flexi_cap_kim,https://files.hdfcfund.com/s3fs-public/KIM/2025-11/KIM%20-%20HDFC%20Flexi%20Cap%20Fund%20dated%20November%2021%2C%202025.pdf,HDFC AMC,kim,flexi_cap,HDFC Flexi Cap Fund KIM,expense_ratio|exit_load|min_sip|riskometer|benchmark
+hdfc_elss_kim,https://files.hdfcfund.com/s3fs-public/KIM/2025-11/KIM%20-%20HDFC%20ELSS%20Tax%20Saver%20dated%20November%2021%2C%202025_0.pdf?VersionId=CWvBjiK_hIuApMLzaZJVRt17Sc6tmlog,HDFC AMC,kim,elss,HDFC ELSS Tax Saver Fund KIM,elss_lockin|expense_ratio|exit_load|min_sip
+hdfc_mid_cap_kim,https://files.hdfcfund.com/s3fs-public/KIM/2025-11/KIM%20-%20HDFC%20Mid%20Cap%20Fund%20dated%20November%2021%2C%202025_1.pdf?VersionId=lvZLv6TD_uI7sOzea0XCJmAfPcbIHPlw,HDFC AMC,kim,mid_cap,HDFC Mid Cap Fund KIM,expense_ratio|exit_load|min_sip|riskometer|benchmark
+hdfc_kim_catalogue,https://www.hdfcfund.com/mutual-funds/fund-documents/kim,HDFC AMC,catalogue,amc_wide,HDFC fund documents KIM and SID catalogue,scheme_documents
+hdfc_factsheet_catalogue,https://www.hdfcfund.com/mutual-funds/factsheets,HDFC AMC,catalogue,amc_wide,HDFC factsheet catalogue,expense_ratio|exit_load|benchmark
+hdfc_statement_guide,https://www.hdfcfund.com/services/additional-info/request-statement,HDFC AMC,statement_guide,amc_wide,HDFC account statement and capital gains guide,statements
+hdfc_faq,https://www.hdfcfund.com/services/faqs,HDFC AMC,faq,amc_wide,HDFC investor FAQ,definitions|statements
+sebi_riskometer,https://investor.sebi.gov.in/hindi/riskometer.html,SEBI,education,amc_wide,SEBI riskometer investor education,riskometer
+sebi_scheme_categorisation,https://www.sebi.gov.in/sebi_data/attachdocs/feb-2026/1772079826878.pdf,SEBI,education,amc_wide,SEBI scheme categorisation circular,definitions|riskometer
+sebi_investor_booklet,https://investor.sebi.gov.in/pdf/downloadable-documents/Financial%20Education%20Booklet%20-%20English.pdf,SEBI,education,amc_wide,SEBI financial education booklet,definitions|riskometer
+amfi_nav_exit_load,https://www.amfiindia.com/investor/knowledge-center-info?zoneName=NetAssetValueNAV,AMFI,education,amc_wide,AMFI NAV and exit load basics,definitions|exit_load
+amfi_elss_categorisation,https://www.amfiindia.com/investor/knowledge-center-info?zoneName=CategorizationOfMutualFundSchemes,AMFI,education,amc_wide,AMFI scheme categorisation and ELSS,elss_lockin|definitions
+amfi_cutoff_nav,https://www.amfiindia.com/investor/knowledge-center-info?zoneName=CutOffTimingsAndNewRuleOnApplicableNAV,AMFI,education,amc_wide,AMFI cut-off timing and applicable NAV,definitions
+amfi_scheme_types,https://www.amfiindia.com/investor/knowledge-center-info?zoneName=TypesOfMutualFundSchemes,AMFI,education,amc_wide,AMFI types of mutual fund schemes,definitions
