@@ -125,7 +125,8 @@ def _render_answer_body(envelope: dict[str, Any]) -> None:
         st.code(proof, language=None)
 
 def _queue_followup(question: str) -> None:
-    """Put a suggested question into the input so the user can review it."""
+    """Prefill the editable composer with a suggested question."""
+    st.session_state["_clear_question_input"] = False
     st.session_state["question_input"] = question
     st.rerun()
 
@@ -231,11 +232,14 @@ def _run_initialization(config: Config, force: bool=False) -> None:
     st.rerun()
 
 def _render_chat_input(runtime: Runtime) -> None:
-    """Render an editable question field and process only an explicit submit."""
+    """Render an editable composer and process each explicit submission."""
     from src.services.chat import ChatUnavailableError, process_question
 
-    with st.form("chat_form", clear_on_submit=True, border=False):
-        input_col, send_col = st.columns([10, 1], vertical_alignment="center")
+    with st.form("chat_form", clear_on_submit=False, border=False):
+        input_col, send_col = st.columns(
+            [10, 1],
+            vertical_alignment="center",
+        )
         with input_col:
             question = st.text_input(
                 "Question",
@@ -249,6 +253,7 @@ def _render_chat_input(runtime: Runtime) -> None:
                 "↑",
                 type="primary",
                 width="stretch",
+                key="send_question_button",
             )
 
     if not submitted:
@@ -262,49 +267,69 @@ def _render_chat_input(runtime: Runtime) -> None:
         st.warning("Please keep questions under 2000 characters.")
         return
 
-    kb_unavailable = False
-    with st.spinner("Checking the official documents…"):
-        if not get_knowledge_base():
-            kb_unavailable = True
-        else:
-            try:
+    # Always create a response envelope for a submitted question. This keeps
+    # the turn visible in chat history even if a backend dependency fails.
+    try:
+        with st.spinner("Checking the official documents…"):
+            if not get_knowledge_base():
+                envelope = {
+                    "type": "error",
+                    "answer": (
+                        "The knowledge base is unavailable right now. "
+                        "Please try again shortly or initialize the knowledge base."
+                    ),
+                }
+            else:
                 model = get_model()
-                result = process_question(runtime.config, question, None, model=model)
-            except ChatUnavailableError:
-                kb_unavailable = True
-            except ValueError:
-                st.warning("Please enter a question.")
-                return
-            except Exception:
-                st.error(
-                    "The assistant could not process that question right now. "
-                    "Please try again."
+                result = process_question(
+                    runtime.config,
+                    question,
+                    None,  # Scheme is inferred from the user's question.
+                    model=model,
                 )
-                return
+                envelope = result.envelope
 
-    if kb_unavailable:
-        st.error(
-            "The knowledge base is unavailable right now. "
-            "Please try again in a moment."
-        )
-        if st.button("Repair knowledge base", key="repair_kb"):
-            _run_initialization(runtime.config, force=True)
+    except ChatUnavailableError:
+        envelope = {
+            "type": "error",
+            "answer": (
+                "The knowledge base is unavailable right now. "
+                "Please try again shortly or initialize the knowledge base."
+            ),
+        }
+    except ValueError:
+        st.warning("Please enter a valid question.")
         return
+    except Exception as exc:
+        safe_log(
+            logger,
+            "chat_request_failed",
+            error_type=type(exc).__name__,
+        )
+        envelope = {
+            "type": "error",
+            "answer": (
+                "The assistant could not process that question right now. "
+                "Please try again."
+            ),
+        }
 
-    envelope = result.envelope
     display_question = (
         "[Personal information hidden]"
         if envelope.get("type") == "pii"
         else question
     )
-    st.session_state.messages.append(
-        {"role": "user", "display": display_question}
+
+    st.session_state.messages.extend(
+        [
+            {"role": "user", "display": display_question},
+            {"role": "assistant", "envelope": envelope},
+        ]
     )
-    st.session_state.messages.append(
-        {"role": "assistant", "envelope": envelope}
-    )
-    # Rerender from the saved history so the newest answer appears in the
-    # main answer area immediately, above the fixed question composer.
+
+    # Clear the composer on the next script run, before the text_input widget
+    # is created. This avoids form clear-on-submit state issues on later turns.
+    st.session_state["_clear_question_input"] = True
     st.rerun()
 
 def _inject_ui_styles() -> None:
@@ -546,7 +571,7 @@ def render_empty_answer_state() -> None:
 
 
 def main() -> None:
-    """Render the HDFC MF Facts interface and keep example prompts available."""
+    """Render HDFC MF Facts with persistent examples and multi-turn chat."""
     _inject_ui_styles()
     render_header()
 
@@ -554,6 +579,11 @@ def main() -> None:
         st.session_state.messages = []
     if "question_input" not in st.session_state:
         st.session_state.question_input = ""
+
+    # Reset the submitted input before its widget is instantiated on this run.
+    if st.session_state.get("_clear_question_input", False):
+        st.session_state["question_input"] = ""
+        st.session_state["_clear_question_input"] = False
 
     runtime = get_runtime()
     if runtime.config is None or runtime.error:
@@ -574,16 +604,16 @@ def main() -> None:
         st.caption(DISCLAIMER)
         return
 
-    # Show the landing hero and answer placeholder only before the first turn.
     if not st.session_state.messages:
         render_hero()
-        render_empty_answer_state()
-    else:
-        # Keep the latest exchange visible; older exchanges stay collapsible.
-        _render_history()
 
-    # Keep the suggested-question cards visible before and after every answer.
+    # Keep suggested prompts above the answer/conversation area on every turn.
     render_examples()
+
+    if st.session_state.messages:
+        _render_history()
+    else:
+        render_empty_answer_state()
 
     st.caption(DISCLAIMER)
     _render_chat_input(runtime)
