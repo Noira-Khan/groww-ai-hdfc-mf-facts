@@ -1,83 +1,45 @@
 """Streamlit frontend for the HDFC MF Facts assistant.
 
 The app shell renders immediately. Configuration is loaded quickly, while the
+
 embedding model and knowledge base are initialized only when needed, with
-visible stage-level progress. Answer generation still uses the shared
+
+visible stage-level progress. Suggested questions prefill the editable composer.
+
+Answer generation still uses the shared
+
 ``src.services.chat.process_question`` path, so all safety controls and
+
 validation behave exactly like the FastAPI app.
+
 """
-
 from __future__ import annotations
-
 import os
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+from textwrap import dedent
 from typing import Any
-
 import streamlit as st
-
-st.set_page_config(
-    page_title="HDFC MF Facts",
-    layout="centered",
-    initial_sidebar_state="expanded",
-)
-
+st.set_page_config(page_title='HDFC MF Facts', page_icon='🌱', layout='centered', initial_sidebar_state='collapsed')
 from src.config import Config, load_config, validate_runtime
 from src.logging import get_logger, safe_log
-from src.safety.intent import SCHEME_LABELS
 from src.services.kb_state import artifacts_present
-
 PROJECT_ROOT = Path(__file__).resolve().parent
-CONFIG_PATH = PROJECT_ROOT / "config.yaml"
-
-SECRET_ENV_KEYS = (
-    "GROQ_API_KEY",
-    "GEMINI_API_KEY",
-    "OPENAI_API_KEY",
-    "ANTHROPIC_API_KEY",
-    "MISTRAL_API_KEY",
-    "LLM_MODEL_ID",
-    "LLM_PROVIDER",
-    "CACHE_SALT",
-    "HF_TOKEN",
-)
-
-TYPE_LABELS = {
-    "answer": "ANSWER FROM OFFICIAL SOURCES",
-    "refusal_advice": "FACTS-ONLY ASSISTANT",
-    "refusal_performance": "FACTS-ONLY ASSISTANT",
-    "not_in_sources": "OUTSIDE CURATED SOURCES",
-    "clarify": "CHOOSE A SCHEME",
-    "pii": "PRIVACY PROTECTION",
-    "error": "SOMETHING WENT WRONG",
-}
-
-TYPE_TAGS = {
-    "refusal_advice": "No advice or recommendations.",
-    "refusal_performance": "No return or performance views.",
-    "not_in_sources": "Only curated official documents are used.",
-    "clarify": "Scheme context is required for this fact.",
-    "pii": "Personal data is not shown, logged, or stored.",
-    "error": "No unverified answer is shown.",
-}
-
-DISCLAIMER = (
-    "This assistant shares factual information from official HDFC AMC, SEBI, "
-    "and AMFI sources only. It does not provide investment advice, "
-    "recommendations, or performance comparisons. Mutual fund investments are "
-    "subject to market risks; read all scheme-related documents carefully."
-)
-
-logger = get_logger("streamlit")
-
+CONFIG_PATH = PROJECT_ROOT / 'config.yaml'
+SECRET_ENV_KEYS = ('GROQ_API_KEY', 'GEMINI_API_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'MISTRAL_API_KEY', 'LLM_MODEL_ID', 'LLM_PROVIDER', 'CACHE_SALT', 'HF_TOKEN')
+TYPE_LABELS = {'answer': 'ANSWER FROM OFFICIAL SOURCES', 'refusal_advice': 'FACTS-ONLY ASSISTANT', 'refusal_performance': 'FACTS-ONLY ASSISTANT', 'not_in_sources': 'OUTSIDE CURATED SOURCES', 'clarify': 'SPECIFY A SCHEME', 'pii': 'PRIVACY PROTECTION', 'error': 'SOMETHING WENT WRONG'}
+TYPE_TAGS = {'refusal_advice': 'No advice or recommendations.', 'refusal_performance': 'No return or performance views.', 'not_in_sources': 'Only curated official documents are used.', 'clarify': 'Scheme context is required for this fact.', 'pii': 'Personal data is not shown, logged, or stored.', 'error': 'No unverified answer is shown.'}
+DISCLAIMER = 'This assistant shares factual information from official HDFC AMC, SEBI, and AMFI sources only. It does not provide investment advice, recommendations, or performance comparisons. Mutual fund investments are subject to market risks; read all scheme-related documents carefully.'
+GITHUB_URL = 'https://github.com/Noira-Khan/groww-ai-hdfc-mf-facts'
+SUGGESTED_QUESTIONS = ['What is NAV in a mutual fund?', 'What is the lock-in period of HDFC ELSS Tax Saver Fund?', 'What is the riskometer of HDFC Mid Cap Fund?', 'What is the benchmark of HDFC Large Cap Fund?', 'What is the benchmark of HDFC Flexi Cap Fund?', 'What is the exit load of HDFC Flexi Cap Fund?']
+logger = get_logger('streamlit')
 
 @dataclass
 class Runtime:
     config: Config | None = None
     error: str | None = None
     warnings: tuple[str, ...] = field(default_factory=tuple)
-
 
 def _secret_value(name: str) -> str | None:
     try:
@@ -89,7 +51,6 @@ def _secret_value(name: str) -> str | None:
     text = str(value).strip()
     return text or None
 
-
 def _apply_secrets() -> None:
     """Copy deploy-time secrets into the environment before config loading."""
     for name in SECRET_ENV_KEYS:
@@ -97,36 +58,28 @@ def _apply_secrets() -> None:
         if value:
             os.environ[name] = value
 
-
 @st.cache_resource(show_spinner=False)
 def get_runtime() -> Runtime:
     """Load configuration only. This must stay fast so the shell renders early."""
     _apply_secrets()
-
     try:
         config = load_config(CONFIG_PATH)
     except Exception as exc:
-        return Runtime(error=f"Configuration could not be loaded: {exc}")
-
+        return Runtime(error=f'Configuration could not be loaded: {exc}')
     try:
         warnings = tuple(validate_runtime(config))
     except Exception as exc:
-        return Runtime(config=config, error=f"Configuration is invalid: {exc}")
-
+        return Runtime(config=config, error=f'Configuration is invalid: {exc}')
     return Runtime(config=config, warnings=warnings)
-
 
 @st.cache_resource(show_spinner=False)
 def get_model() -> Any:
     """Load and cache the embedding model without blocking the initial shell."""
     runtime = get_runtime()
     if runtime.config is None:
-        raise RuntimeError("Configuration is not available.")
-
+        raise RuntimeError('Configuration is not available.')
     from src.ingest.embed import load_model
-
     return load_model(runtime.config)
-
 
 @st.cache_resource(show_spinner=False)
 def get_knowledge_base() -> bool:
@@ -134,90 +87,74 @@ def get_knowledge_base() -> bool:
     runtime = get_runtime()
     if runtime.config is None:
         return False
-
     from src.services.knowledge_base import collection_ready
-
     return collection_ready(runtime.config)
-
 
 def _source_link(url: str, name: str | None) -> None:
     from src.rag.validate import is_allowlisted_url
-
-    label = name or "Official source"
+    label = name or 'Official source'
     if is_allowlisted_url(url):
-        st.markdown(f"**Official source:** [{label}]({url})")
+        st.markdown(f'**Official source:** [{label}]({url})')
     else:
-        st.markdown("**Official source:**")
+        st.markdown('**Official source:**')
         st.text(url)
 
-
 def _render_answer_body(envelope: dict[str, Any]) -> None:
-    response_type = str(envelope.get("type") or "error")
-    answer = str(envelope.get("answer") or "")
-
-    st.caption(TYPE_LABELS.get(response_type, "RESPONSE"))
-    if response_type == "answer":
+    response_type = str(envelope.get('type') or 'error')
+    answer = str(envelope.get('answer') or '')
+    st.caption(TYPE_LABELS.get(response_type, 'RESPONSE'))
+    if response_type == 'answer':
         st.markdown(answer)
-    elif response_type == "clarify":
+    elif response_type == 'clarify':
         st.info(answer)
-    elif response_type == "error":
+    elif response_type == 'error':
         st.error(answer)
     else:
         st.warning(answer)
-
     tag = TYPE_TAGS.get(response_type)
     if tag:
         st.caption(tag)
-
-    source_url = envelope.get("source_url")
+    source_url = envelope.get('source_url')
     if isinstance(source_url, str) and source_url.strip():
-        _source_link(source_url.strip(), envelope.get("source_name"))
-
-    source_date = envelope.get("as_on_date") or envelope.get("retrieved_at")
+        _source_link(source_url.strip(), envelope.get('source_name'))
+    source_date = envelope.get('as_on_date') or envelope.get('retrieved_at')
     st.caption(f"Source date: {source_date or 'Not provided'}")
-
-    proof = envelope.get("proof")
+    proof = envelope.get('proof')
     if isinstance(proof, str) and proof.strip():
-        st.markdown("**Verbatim proof passage**")
+        st.markdown('**Verbatim proof passage**')
         st.code(proof, language=None)
 
-
 def _queue_followup(question: str) -> None:
-    st.session_state.pending_question = question
-    st.session_state.pending_auto_scheme = True
+    """Put a suggested question into the input so the user can review it."""
+    st.session_state["question_input"] = question
     st.rerun()
-
 
 def _render_followups(questions: Any, key_prefix: str) -> None:
     if not isinstance(questions, list) or not questions:
         return
-    safe_questions = [
-        item for item in questions[:6] if isinstance(item, str) and item.strip()
-    ]
+    safe_questions = [item for item in questions[:6] if isinstance(item, str) and item.strip()]
     if not safe_questions:
         return
-    st.caption("Explore official facts")
+    st.caption('Explore official facts')
     for index, question in enumerate(safe_questions):
-        if st.button(question, key=f"{key_prefix}_followup_{index}"):
+        if st.button(question, key=f'{key_prefix}_followup_{index}'):
             _queue_followup(question)
 
-
-def _render_assistant(
-    envelope: dict[str, Any], key_prefix: str, show_followups: bool
-) -> None:
-    with st.chat_message("assistant"):
+def _render_assistant(envelope: dict[str, Any], key_prefix: str, show_followups: bool) -> None:
+    with st.chat_message('assistant'):
         _render_answer_body(envelope)
         if show_followups:
-            _render_followups(envelope.get("can_do"), key_prefix)
-
+            _render_followups(envelope.get('can_do'), key_prefix)
 
 def _render_history() -> None:
-    for index, message in enumerate(st.session_state.messages):
+    """Show the latest exchange immediately and keep older turns collapsible."""
+    messages = st.session_state.messages
+
+    def render_message(index: int, message: dict[str, Any]) -> None:
         if message.get("role") == "user":
             with st.chat_message("user"):
                 st.markdown(message.get("display") or "")
         elif message.get("role") == "assistant":
-            is_last = index == len(st.session_state.messages) - 1
             _render_assistant(
                 message.get("envelope")
                 or {
@@ -225,163 +162,106 @@ def _render_history() -> None:
                     "answer": "I could not produce a verified answer right now.",
                 },
                 key_prefix=f"message_{index}",
-                show_followups=is_last,
+                show_followups=index == len(messages) - 1,
             )
 
+    if len(messages) > 2:
+        older_messages = messages[:-2]
+        with st.expander(
+            f"Previous questions ({sum(1 for item in older_messages if item.get('role') == 'user')})",
+            expanded=False,
+        ):
+            for index, message in enumerate(older_messages):
+                render_message(index, message)
 
-def _sidebar(runtime: Runtime) -> None:
-    with st.sidebar:
-        st.header("HDFC MF Facts")
-        st.caption("Facts-only. No investment advice.")
-        st.markdown(
-            "Ask factual questions about HDFC Large Cap, Flexi Cap, ELSS Tax "
-            "Saver, and Mid Cap schemes."
-        )
-
-        st.divider()
-        options = ["Auto-detect"] + list(SCHEME_LABELS.values())
-        choice = st.selectbox(
-            "Scheme context",
-            options,
-            index=0,
-            help=(
-                "Optional. Scheme-sensitive questions can also name a scheme. "
-                "The curated corpus covers Large Cap, Flexi Cap, ELSS, and Mid Cap."
-            ),
-        )
-        st.session_state.selected_scheme = next(
-            (code for code, label in SCHEME_LABELS.items() if label == choice),
-            None,
-        )
-
-        st.divider()
-        st.markdown("**Official sources**")
-        st.markdown(
-            "- [HDFC AMC fund documents](https://www.hdfcfund.com/mutual-funds/fund-documents/kim)\n"
-            "- [SEBI investor education](https://investor.sebi.gov.in/)\n"
-            "- [AMFI knowledge center](https://www.amfiindia.com/investor/knowledge-center-info)"
-        )
-
-        if runtime.config is not None:
-            st.divider()
-            st.markdown("**Knowledge base**")
-            if artifacts_present(runtime.config):
-                st.caption("Initialized. Source-backed answers are enabled.")
-            else:
-                st.caption("Not initialized yet. Use the setup panel to build it.")
-
-        if runtime.warnings:
-            st.divider()
-            st.warning(
-                "Deployment notes:\n\n"
-                + "\n".join(f"- {warning}" for warning in runtime.warnings)
-            )
-
-        st.divider()
-        st.caption(DISCLAIMER)
-
+    latest_start = max(0, len(messages) - 2)
+    for index in range(latest_start, len(messages)):
+        render_message(index, messages[index])
 
 def _render_config_error(runtime: Runtime) -> None:
-    st.error("The assistant is not configured correctly.")
+    st.error('The assistant is not configured correctly.')
     if runtime.error:
-        st.markdown(f"**Details:** {runtime.error}")
-    if st.button("Reload configuration"):
+        st.markdown(f'**Details:** {runtime.error}')
+    if st.button('Reload configuration'):
         st.cache_resource.clear()
         st.rerun()
 
-
 def _render_setup(config: Config) -> None:
-    st.warning(
-        "The official knowledge base has not been built in this deployment yet. "
-        "It is created once from the curated HDFC AMC, SEBI, and AMFI sources."
-    )
-    st.markdown(
-        "**What happens when you initialize:**\n"
-        "1. Load the local embedding model.\n"
-        "2. Download the official documents, with live progress.\n"
-        "3. Normalize and chunk the documents.\n"
-        "4. Embed the chunks and build the Chroma index.\n"
-        "5. Validate the index before the assistant can answer."
-    )
-    st.caption(
-        "The first run can take several minutes. The page stays responsive and "
-        "each stage reports its own progress."
-    )
-    if st.button("Initialize knowledge base", type="primary", key="initialize_kb"):
+    st.warning('The official knowledge base has not been built in this deployment yet. It is created once from the curated HDFC AMC, SEBI, and AMFI sources.')
+    st.markdown('**What happens when you initialize:**\n1. Load the local embedding model.\n2. Download the official documents, with live progress.\n3. Normalize and chunk the documents.\n4. Embed the chunks and build the Chroma index.\n5. Validate the index before the assistant can answer.')
+    st.caption('The first run can take several minutes. The page stays responsive and each stage reports its own progress.')
+    if st.button('Initialize knowledge base', type='primary', key='initialize_kb'):
         _run_initialization(config, force=False)
 
-
-def _run_initialization(config: Config, force: bool = False) -> None:
+def _run_initialization(config: Config, force: bool=False) -> None:
     from src.services.knowledge_base import KnowledgeBaseError, ensure_knowledge_base
-
-    progress_bar = st.progress(0.0, text="Starting knowledge-base initialization…")
-    status = st.status("Initializing the knowledge base…", expanded=True)
-    last_stage = {"name": None}
+    progress_bar = st.progress(0.0, text='Starting knowledge-base initialization…')
+    status = st.status('Initializing the knowledge base…', expanded=True)
+    last_stage = {'name': None}
 
     def on_progress(stage: str, fraction: float, message: str) -> None:
         safe_fraction = max(0.0, min(1.0, float(fraction)))
         progress_bar.progress(safe_fraction, text=message)
         status.update(label=message)
-        if stage != last_stage["name"]:
+        if stage != last_stage['name']:
             status.write(message)
-            last_stage["name"] = stage
-
+            last_stage['name'] = stage
     try:
-        on_progress("model", 0.02, "Loading the embedding model…")
+        on_progress('model', 0.02, 'Loading the embedding model…')
         model_started = time.perf_counter()
         model = get_model()
-        safe_log(
-            logger,
-            "kb_stage",
-            stage="model",
-            status="ok",
-            latency_ms=int((time.perf_counter() - model_started) * 1000),
-        )
-        on_progress("model", 0.12, "Embedding model ready.")
+        safe_log(logger, 'kb_stage', stage='model', status='ok', latency_ms=int((time.perf_counter() - model_started) * 1000))
+        on_progress('model', 0.12, 'Embedding model ready.')
 
         def kb_progress(stage: str, fraction: float, message: str) -> None:
             on_progress(stage, 0.12 + 0.88 * fraction, message)
-
-        ensure_knowledge_base(
-            config, model=model, progress=kb_progress, force=force
-        )
+        ensure_knowledge_base(config, model=model, progress=kb_progress, force=force)
     except KnowledgeBaseError as exc:
-        status.update(label="Knowledge-base initialization failed", state="error")
+        status.update(label='Knowledge-base initialization failed', state='error')
         st.error(str(exc))
-        st.info("Check the deployment logs for the failing stage, then retry.")
+        st.info('Check the deployment logs for the failing stage, then retry.')
         return
     except Exception as exc:
-        status.update(label="Knowledge-base initialization failed", state="error")
-        st.error(f"Knowledge-base initialization failed unexpectedly. ({exc})")
+        status.update(label='Knowledge-base initialization failed', state='error')
+        st.error(f'Knowledge-base initialization failed unexpectedly. ({exc})')
         return
-
-    status.update(label="Knowledge base ready", state="complete")
-    progress_bar.progress(1.0, text="Knowledge base ready.")
+    status.update(label='Knowledge base ready', state='complete')
+    progress_bar.progress(1.0, text='Knowledge base ready.')
     get_knowledge_base.clear()
     st.rerun()
 
-
 def _render_chat_input(runtime: Runtime) -> None:
+    """Render an editable question field and process only an explicit submit."""
     from src.services.chat import ChatUnavailableError, process_question
 
-    question = st.chat_input(
-        "Ask a factual question about HDFC Mutual Fund schemes…"
-    )
-    use_auto_scheme = False
-    if st.session_state.pending_question:
-        question = st.session_state.pending_question
-        use_auto_scheme = st.session_state.pending_auto_scheme
-        st.session_state.pending_question = None
-        st.session_state.pending_auto_scheme = False
+    with st.form("chat_form", clear_on_submit=True, border=False):
+        input_col, send_col = st.columns([10, 1], vertical_alignment="center")
+        with input_col:
+            question = st.text_input(
+                "Question",
+                key="question_input",
+                placeholder="Ask HDFC MF Facts a question...",
+                label_visibility="collapsed",
+                max_chars=2000,
+            )
+        with send_col:
+            submitted = st.form_submit_button(
+                "↑",
+                type="primary",
+                width="stretch",
+            )
 
-    if not question:
+    if not submitted:
         return
 
+    question = (question or "").strip()
+    if not question:
+        st.warning("Please enter a question.")
+        return
     if len(question) > 2000:
         st.warning("Please keep questions under 2000 characters.")
         return
 
-    scheme = None if use_auto_scheme else st.session_state.selected_scheme
     kb_unavailable = False
     with st.spinner("Checking the official documents…"):
         if not get_knowledge_base():
@@ -389,12 +269,7 @@ def _render_chat_input(runtime: Runtime) -> None:
         else:
             try:
                 model = get_model()
-                result = process_question(
-                    runtime.config,
-                    question,
-                    scheme,
-                    model=model,
-                )
+                result = process_question(runtime.config, question, None, model=model)
             except ChatUnavailableError:
                 kb_unavailable = True
             except ValueError:
@@ -428,49 +303,291 @@ def _render_chat_input(runtime: Runtime) -> None:
     st.session_state.messages.append(
         {"role": "assistant", "envelope": envelope}
     )
+    # Rerender from the saved history so the newest answer appears in the
+    # main answer area immediately, above the fixed question composer.
+    st.rerun()
 
-    with st.chat_message("user"):
-        st.markdown(display_question)
-    _render_assistant(
-        envelope,
-        key_prefix=f"message_{len(st.session_state.messages) - 1}",
-        show_followups=True,
+def _inject_ui_styles() -> None:
+    """Apply the visual system used by the HDFC MF Facts reference layout."""
+    st.markdown(
+        dedent("""
+        <style>
+        [data-testid="stAppViewContainer"] {
+            background: #ffffff;
+        }
+        [data-testid="stHeader"] {
+            background: rgba(255, 255, 255, 0.96);
+        }
+        [data-testid="stMainBlockContainer"] {
+            width: min(900px, calc(100vw - 2rem)) !important;
+            max-width: 900px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            padding-top: 2.5rem !important;
+            padding-bottom: 7.5rem !important;
+        }
+        [data-testid="stAppViewContainer"] {
+            background: #ffffff;
+        }
+        [data-testid="stHeader"] {
+            background: rgba(255, 255, 255, 0.98);
+        }
+        [data-testid="stForm"] {
+            position: sticky;
+            bottom: 0;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.98);
+            padding: 0.65rem 0 0.35rem;
+            border-top: 1px solid #edf0ed;
+        }
+        [data-testid="stTextInput"] input {
+            min-height: 48px;
+            border-radius: 14px;
+            padding-left: 16px;
+        }
+        [data-testid="stFormSubmitButton"] button {
+            min-height: 48px;
+            height: 48px;
+            border-radius: 13px;
+            background: #079c68;
+            color: #ffffff;
+            border: 1px solid #079c68;
+        }
+        [data-testid="stFormSubmitButton"] button:hover {
+            background: #067d55;
+            border-color: #067d55;
+            color: #ffffff;
+        }
+        div[data-testid="stButton"] > button {
+            width: 100%;
+            min-height: 78px;
+            height: auto;
+            white-space: normal;
+            text-align: left;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            padding: 12px 14px;
+            border: 1px solid #e1e6e2;
+            border-radius: 13px;
+            background: #ffffff;
+            color: #17211c;
+            font-size: 0.88rem;
+            line-height: 1.35;
+            box-shadow: none;
+        }
+        div[data-testid="stButton"] > button:hover {
+            border-color: #079c68;
+            color: #079c68;
+            background: #fbfefc;
+        }
+        div[data-testid="stButton"] > button:focus {
+            border-color: #079c68;
+            box-shadow: 0 0 0 1px #079c68;
+        }
+        div[data-testid="stChatInput"] textarea {
+            border-radius: 14px;
+        }
+        </style>
+        """),
+        unsafe_allow_html=True,
+    )
+
+
+def render_header() -> None:
+    """Render a spacious brand header with a GitHub link."""
+    brand, actions = st.columns([6.5, 1.8], vertical_alignment="center")
+
+    with brand:
+        st.markdown(
+            dedent("""
+                <div style="
+                    display:flex;
+                    align-items:center;
+                    gap:12px;
+                    min-height:80px;
+                    padding:22px 0;
+                ">
+                    <div style="
+                        background:#079c68;
+                        color:#ffffff;
+                        width:42px;
+                        height:42px;
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        border-radius:10px;
+                        font-weight:800;
+                        font-size:20px;
+                    ">H</div>
+                    <div style="line-height:1.4;">
+                        <div style="
+                            font-weight:800;
+                            letter-spacing:.3px;
+                            color:#17211c;
+                            font-size:16px;
+                        ">HDFC MF FACTS</div>
+                        <div style="
+                            font-size:13px;
+                            color:#7b8491;
+                            margin-top:3px;
+                        ">Mutual fund facts, made clear</div>
+                    </div>
+                </div>
+            """),
+            unsafe_allow_html=True,
+        )
+
+    with actions:
+        st.markdown(
+            dedent(f"""
+                <div style="
+                    display:flex;
+                    justify-content:flex-end;
+                    align-items:center;
+                    gap:14px;
+                    white-space:nowrap;
+                    min-height:80px;
+                    padding:22px 0;
+                    font-size:12px;
+                ">
+                    <span style="
+                        background:#e5f7ed;
+                        color:#087a4b;
+                        padding:7px 12px;
+                        border-radius:999px;
+                        font-weight:700;
+                    ">Facts-only</span>
+                    <a href="{GITHUB_URL}"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       style="color:#667085;text-decoration:none;">
+                        GitHub ↗
+                    </a>
+                </div>
+            """),
+            unsafe_allow_html=True,
+        )
+
+    st.divider()
+
+
+def render_hero() -> None:
+    """Render the centered introduction from the supplied UI reference."""
+    st.markdown(
+        dedent("""
+        <div style="max-width:700px;margin:30px auto 24px;text-align:center;">
+            <div style="color:#079c68;font-size:11px;font-weight:800;
+                letter-spacing:2px;margin-bottom:14px;">
+                YOUR MUTUAL FUND FACT DESK
+            </div>
+            <h1 style="font-size:42px;line-height:1.08;letter-spacing:-1.3px;
+                color:#101828;margin:0 0 12px;font-weight:750;">
+                Investing terms,<br>
+                <span style="color:#079c68;">made clearer.</span>
+            </h1>
+            <p style="font-size:16px;color:#737b88;margin:0 0 18px;">
+                Understand scheme documents and mutual-fund terms in plain language.
+            </p>
+            <div style="display:inline-block;padding:12px 16px;
+                background:#f3f7f5;border:1px solid #e1eae4;border-radius:12px;
+                font-size:13px;color:#344054;">
+                Hi! Ask me facts about HDFC Mutual Fund schemes.
+            </div>
+        </div>
+        """),
+        unsafe_allow_html=True,
+    )
+
+
+def render_examples() -> None:
+    """Render six clickable example questions in the reference card grid."""
+    st.markdown("### Try asking")
+    for row_index in range(2):
+        questions = SUGGESTED_QUESTIONS[row_index * 3:(row_index + 1) * 3]
+        columns = st.columns(3, gap="small")
+        for column_index, question in enumerate(questions):
+            with columns[column_index]:
+                if st.button(
+                    question + "  ↗",
+                    key=f"example_{row_index}_{column_index}",
+                    width="stretch",
+                ):
+                    _queue_followup(question)
+
+
+def render_empty_answer_state() -> None:
+    """Render the neutral answer placeholder before the first question."""
+    st.markdown(
+        dedent("""
+        <div style="text-align:center;padding:28px 12px 16px;">
+            <div style="width:34px;height:34px;margin:0 auto 8px;
+                border:1px solid #e1eae4;border-radius:11px;
+                display:flex;align-items:center;justify-content:center;">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="#079c68" stroke-width="1.8" stroke-linecap="round"
+                    stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7
+                        8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8
+                        8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5
+                        a8.5 8.5 0 0 1 8 8v.5z"/>
+                </svg>
+            </div>
+            <div style="font-weight:650;color:#344054;">
+                Your answer will appear here
+            </div>
+            <div style="font-size:13px;color:#7b8491;margin-top:7px;">
+                Choose an example above or type a question below.
+            </div>
+        </div>
+        """),
+        unsafe_allow_html=True,
     )
 
 
 def main() -> None:
-    st.title("HDFC MF Facts")
-    st.caption("Mutual fund facts, made clear. Facts-only. No investment advice.")
-    st.markdown(
-        "Ask about exit load, lock-in, minimum SIP, expense ratio, riskometer, "
-        "benchmark, or account statements. Every factual answer cites one "
-        "official source, its date, and a verbatim proof passage."
-    )
+    """Render the HDFC MF Facts interface and keep example prompts available."""
+    _inject_ui_styles()
+    render_header()
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
-    if "pending_question" not in st.session_state:
-        st.session_state.pending_question = None
-    if "pending_auto_scheme" not in st.session_state:
-        st.session_state.pending_auto_scheme = False
-    if "selected_scheme" not in st.session_state:
-        st.session_state.selected_scheme = None
+    if "question_input" not in st.session_state:
+        st.session_state.question_input = ""
 
     runtime = get_runtime()
-    _sidebar(runtime)
-
     if runtime.config is None or runtime.error:
+        if not st.session_state.messages:
+            render_hero()
         _render_config_error(runtime)
         return
 
-    st.info(DISCLAIMER)
-    _render_history()
+    if runtime.warnings:
+        with st.expander("Deployment notes", expanded=False):
+            for warning in runtime.warnings:
+                st.warning(warning)
 
     if not artifacts_present(runtime.config):
+        if not st.session_state.messages:
+            render_hero()
         _render_setup(runtime.config)
+        st.caption(DISCLAIMER)
         return
 
+    # Show the landing hero and answer placeholder only before the first turn.
+    if not st.session_state.messages:
+        render_hero()
+        render_empty_answer_state()
+    else:
+        # Keep the latest exchange visible; older exchanges stay collapsible.
+        _render_history()
+
+    # Keep the suggested-question cards visible before and after every answer.
+    render_examples()
+
+    st.caption(DISCLAIMER)
     _render_chat_input(runtime)
 
 
-main()
+if __name__ == "__main__":
+    main()
