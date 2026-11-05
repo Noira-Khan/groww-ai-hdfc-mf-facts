@@ -98,7 +98,13 @@ streamlit run streamlit_app.py
 
 The app shell renders immediately. Configuration is loaded quickly, and the embedding model and knowledge base are initialized only when needed. If the corpus or index is missing, the page shows an **Initialize knowledge base** panel with stage-by-stage progress (model, download X/19, normalize, chunk, embed, index, validate). The model and initialized resources are cached for the server process, and later reruns do not rebuild a valid Chroma index.
 
-For Streamlit Community Cloud, add these secrets in the app dashboard:
+### Deploy to Streamlit Community Cloud
+
+1. Push this repo to GitHub (`main`).
+2. In [share.streamlit.io](https://share.streamlit.io), create an app from the repo.
+3. Set **Main file path** to `streamlit_app.py`.
+4. In **Advanced settings**, select **Python 3.13**.
+5. Add secrets in the app dashboard:
 
 ```toml
 GROQ_API_KEY = "your_groq_key_here"
@@ -107,12 +113,15 @@ LLM_MODEL_ID = "openai/gpt-oss-120b"
 # HF_TOKEN = "optional-hugging-face-token"
 ```
 
+6. Deploy, then open the app and click **Initialize knowledge base** on first run.
+
 Do not commit `.streamlit/secrets.toml`; use `.streamlit/secrets.toml.example` as the template. Locally, `.env` continues to work.
 
 Streamlit Community Cloud notes:
 
 - Select **Python 3.13** in **Advanced settings**. `runtime.txt` is not used by Community Cloud for Python version selection. The pinned dependency set is tested on Python 3.13.0.
 - After changing the Python version or `requirements.txt`, use **Manage app → Reboot** (or clear the app cache) so Community Cloud reinstalls the environment.
+- `packages.txt` installs `libxml2-dev` and `libxslt1-dev` for HTML ingestion.
 - `data/artifacts/` is generated and is not committed, so the first cold start downloads official documents and the embedding model. This can take several minutes and needs outbound network access. The UI reports each initialization stage.
 - The filesystem is ephemeral; a restarted or redeployed app rebuilds the corpus and index. Use a persistent external vector store if that cost matters.
 - `requirements.txt` requests the CPU-only PyTorch wheel (`torch==2.15.0+cpu`) from the PyTorch CPU index. This avoids downloading the large NVIDIA CUDA packages on Community Cloud's Linux runtime. The corpus uses `device: cpu` in `config.yaml`.
@@ -176,7 +185,7 @@ Pass criteria:
 - Zero ungrounded numbers.
 - Zero PII leaks in responses, traces, cache keys, or artifacts.
 
-The latest full run passed all three suites: retrieval recall@5 `1.0`, QA factual accuracy `1.0`, citation precision `1.0`, safety routing `1.0`, and zero PII leaks.
+The latest full run passed all three suites: retrieval recall@5 `1.0`, QA factual accuracy `0.9091`, citation precision `1.0`, safety routing `1.0`, and zero PII leaks.
 
 ## Tests
 

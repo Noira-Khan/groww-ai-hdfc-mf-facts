@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import time
 from dataclasses import dataclass
 from typing import Any, Callable
 
@@ -18,6 +20,10 @@ OPENAI_COMPATIBLE_BASE_URLS: dict[str, str] = {
 }
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+RATE_LIMIT_RETRIES = 4
+RATE_LIMIT_FALLBACK_S = 13.0
+RATE_LIMIT_MAX_WAIT_S = 60.0
+_RETRY_AFTER_RE = re.compile(r"try again in\s+([\d.]+)\s*s", re.IGNORECASE)
 
 
 class GenerationError(RuntimeError):
@@ -51,6 +57,28 @@ def _require_api_key(config: Config) -> str:
     return api_key
 
 
+def _rate_limit_wait_seconds(response: Any) -> float:
+    """Extract a wait duration from Retry-After or provider error text."""
+    header = None
+    try:
+        header = response.headers.get("retry-after")
+    except Exception:
+        header = None
+    if header:
+        try:
+            return min(float(header), RATE_LIMIT_MAX_WAIT_S)
+        except ValueError:
+            pass
+    body = getattr(response, "text", "") or ""
+    match = _RETRY_AFTER_RE.search(body)
+    if match:
+        try:
+            return min(float(match.group(1)) + 0.5, RATE_LIMIT_MAX_WAIT_S)
+        except ValueError:
+            pass
+    return RATE_LIMIT_FALLBACK_S
+
+
 def _post_json(
     url: str,
     headers: dict[str, str],
@@ -59,15 +87,26 @@ def _post_json(
 ) -> dict[str, Any]:
     import httpx
 
-    try:
-        response = httpx.post(url, headers=headers, json=payload, timeout=timeout)
-        response.raise_for_status()
-    except httpx.HTTPStatusError as exc:
-        raise GenerationError(
-            f"Provider request failed with HTTP {exc.response.status_code}."
-        ) from exc
-    except httpx.HTTPError as exc:
-        raise GenerationError("Provider request failed or timed out.") from exc
+    last_status_error: Exception | None = None
+    for attempt in range(RATE_LIMIT_RETRIES):
+        try:
+            response = httpx.post(url, headers=headers, json=payload, timeout=timeout)
+            response.raise_for_status()
+            break
+        except httpx.HTTPStatusError as exc:
+            last_status_error = exc
+            status = exc.response.status_code
+            if status == 429 and attempt < RATE_LIMIT_RETRIES - 1:
+                time.sleep(_rate_limit_wait_seconds(exc.response))
+                continue
+            raise GenerationError(
+                f"Provider request failed with HTTP {status}."
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise GenerationError("Provider request failed or timed out.") from exc
+    else:
+        status = getattr(getattr(last_status_error, "response", None), "status_code", "?")
+        raise GenerationError(f"Provider request failed with HTTP {status}.")
 
     try:
         data = response.json()
@@ -226,7 +265,9 @@ def parse_candidate(raw: str) -> dict[str, Any]:
     """Parse the provider's strict-JSON answer, tolerating code fences."""
     try:
         payload = json.loads(_extract_json_object(raw))
-    except json.JSONDecodeError as exc:
+    except (json.JSONDecodeError, GenerationError) as exc:
+        if isinstance(exc, GenerationError):
+            raise
         raise GenerationError("Provider returned invalid JSON.") from exc
     if not isinstance(payload, dict):
         raise GenerationError("Provider JSON must be an object.")

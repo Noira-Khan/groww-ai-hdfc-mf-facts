@@ -9,6 +9,7 @@ from src.rag.topics import (
 
 def test_detects_fact_topics():
     assert detect_topic("What is the exit load?") == "exit_load"
+    assert detect_topic("What is the exit-load?") == "exit_load"
     assert detect_topic("What is the lock-in period?") == "elss_lockin"
     assert detect_topic("What is the minimum SIP?") == "min_sip"
     assert detect_topic("What is the Total Expense Ratio?") == "expense_ratio"
@@ -20,6 +21,17 @@ def test_detects_fact_topics():
     )
     assert detect_topic("What is NAV in a mutual fund?") == "definitions"
     assert detect_topic("Tell me about HDFC Mid Cap Fund.") is None
+
+
+def test_text_matches_topic_reads_chunk_body():
+    from src.rag.topics import text_matches_topic
+
+    assert text_matches_topic(
+        "exit_load", "Fees", "An Exit Load of 1.00% applies."
+    )
+    assert not text_matches_topic(
+        "exit_load", "Fees", "Minimum SIP is 100."
+    )
 
 
 def test_builds_self_contained_scheme_followups():

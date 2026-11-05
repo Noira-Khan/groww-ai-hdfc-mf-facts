@@ -147,7 +147,10 @@ def test_no_chunks_returns_not_in_sources(config, monkeypatch):
     assert envelope["chunks_used"] == []
 
 
-def test_topic_mismatch_returns_not_in_sources(config, monkeypatch):
+def test_topic_mismatch_still_generates_when_chunk_text_is_usable(
+    config, monkeypatch
+):
+    """Metadata topic mismatch must not block generation if chunk text is usable."""
     chunk = _chunk()
     chunk.metadata["topic"] = "definitions"
     retrieval = RetrievalResult(
@@ -156,17 +159,16 @@ def test_topic_mismatch_returns_not_in_sources(config, monkeypatch):
     )
     monkeypatch.setattr(pipeline_module, "retrieve", lambda *a, **k: retrieval)
 
-    def fail(*args, **kwargs):
-        raise AssertionError("generation should not run without topical evidence")
-
     envelope = answer_question(
         config,
         "What is the exit load of HDFC Flexi Cap Fund?",
-        complete_fn=fail,
+        complete_fn=lambda cfg, messages: _candidate(),
     )
 
-    assert envelope["type"] == "not_in_sources"
-    assert envelope["chunks_used"] == []
+    assert envelope["type"] == "answer"
+    assert envelope["chunks_used"] == ["c1"]
+    assert retrieval.debug["evidence_assessment"]["retrieved_chunks"] == 1
+    assert retrieval.debug["evidence_assessment"]["topic_matches"] == 0
 
 
 def test_model_says_not_in_sources(config, monkeypatch):

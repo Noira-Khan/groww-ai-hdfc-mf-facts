@@ -31,13 +31,15 @@ vector_store:
   distance: "cosine"
   rebuild: false
 
+
 retrieval:
-  top_k: 5
-  candidate_pool: 20
-  score_threshold: 0.35
-  max_context_chunks: 3
+  top_k: 8
+  candidate_pool: 30
+  score_threshold: 0.30
+  max_context_chunks: 5
   topic_boost: 0.12
   suggestion_score_threshold: 0.55
+
 
 llm:
   provider: "groq"               # groq | gemini | openai | anthropic | mistral

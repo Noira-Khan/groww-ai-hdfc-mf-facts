@@ -104,15 +104,37 @@ def test_retrieve_prefers_specific_documents_within_window(config, monkeypatch):
     _install(
         monkeypatch,
         [
-            _row("catalogue", 0.10, "Catalogue overview.", doc_type="catalogue"),
-            _row("kim", 0.14, "KIM exit load details.", doc_type="kim"),
-            _row("faq", 0.05, "FAQ overview.", doc_type="faq"),
+            _row(
+                "catalogue",
+                0.10,
+                "Catalogue overview.",
+                doc_type="catalogue",
+                topic="general",
+                section="Overview",
+            ),
+            _row(
+                "kim",
+                0.14,
+                "KIM exit load details.",
+                doc_type="kim",
+                topic="exit_load",
+                section="Exit load",
+            ),
+            _row(
+                "faq",
+                0.05,
+                "FAQ overview.",
+                doc_type="faq",
+                topic="general",
+                section="FAQ",
+            ),
         ],
     )
 
     result = retrieve(config, "exit load", model=FakeModel())
 
-    assert [chunk.chunk_id for chunk in result.chunks] == ["faq", "kim", "catalogue"]
+    # Topic/lexical signal + official-doc preference should surface KIM first.
+    assert [chunk.chunk_id for chunk in result.chunks] == ["kim", "faq", "catalogue"]
 
 
 def test_retrieve_debug_excludes_raw_question(config, monkeypatch):
@@ -140,8 +162,20 @@ def test_retrieve_boosts_matching_topic_over_generic_definition(
     _install(
         monkeypatch,
         [
-            _row("defs", 0.20, "A definition.", topic="definitions"),
-            _row("exit", 0.30, "Exit load details.", topic="exit_load"),
+            _row(
+                "defs",
+                0.20,
+                "A definition.",
+                topic="definitions",
+                section="Definitions",
+            ),
+            _row(
+                "exit",
+                0.30,
+                "Exit load details.",
+                topic="exit_load",
+                section="Exit load",
+            ),
         ],
     )
 
@@ -152,8 +186,56 @@ def test_retrieve_boosts_matching_topic_over_generic_definition(
     assert result.debug["detected_topic"] == "exit_load"
     assert [chunk.chunk_id for chunk in result.chunks] == ["exit", "defs"]
     assert result.chunks[0].raw_score == pytest.approx(0.70)
-    assert result.chunks[0].score == pytest.approx(0.82)
+    assert result.chunks[0].score > result.chunks[1].score
     assert result.debug["candidates"][0]["topic_match"] is True
+
+
+def test_retrieve_boosts_topic_from_chunk_text_without_metadata(config, monkeypatch):
+    _install(
+        monkeypatch,
+        [
+            _row(
+                "generic",
+                0.15,
+                "General scheme overview without the target fee.",
+                topic="general",
+                section="Overview",
+            ),
+            _row(
+                "text_hit",
+                0.28,
+                "An Exit Load of 1.00% applies within one year.",
+                topic="general",
+                section="Fees",
+            ),
+        ],
+    )
+
+    result = retrieve(config, "What is the exit load?", model=FakeModel())
+
+    assert result.debug["detected_topic"] == "exit_load"
+    assert result.chunks[0].chunk_id == "text_hit"
+    assert result.debug["candidates"][0]["topic_match"] is True
+
+
+def test_retrieve_diversifies_selected_sources(config, monkeypatch):
+    config.retrieval.max_context_chunks = 3
+    _install(
+        monkeypatch,
+        [
+            _row("a1", 0.10, "Exit load page detail one.", source_id="page"),
+            _row("a2", 0.11, "Exit load page detail two.", source_id="page"),
+            _row("b1", 0.12, "Exit load kim detail one.", source_id="kim"),
+            _row("c1", 0.13, "Exit load sid detail one.", source_id="sid"),
+        ],
+    )
+
+    result = retrieve(config, "What is the exit load?", model=FakeModel())
+
+    selected_sources = [
+        chunk.metadata.get("source_id") for chunk in result.chunks
+    ]
+    assert selected_sources == ["page", "kim", "sid"]
 
 
 def test_retrieved_chunk_accessors():

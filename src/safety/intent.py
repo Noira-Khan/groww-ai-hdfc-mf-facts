@@ -21,8 +21,14 @@ SCHEME_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("small_cap", re.compile(r"\bsmall[\s-]*cap\b", re.IGNORECASE)),
 )
 SCHEME_SENSITIVE_TOPICS = re.compile(
-    r"\bexit\s*load\b|\bexpense\s*ratio\b|\bter\b|\bminimum\s+(?:sip|investment|"
-    r"lump\s*sum)\b|\briskometer\b|\bbenchmark\b|\block[\s-]*in\b",
+    r"\bexit\s*load\b|"
+    r"\bexpense\s*ratio\b|"
+    r"\bter\b|"
+    r"\bminimum\s+(?:sip|investment|purchase|application|lump[\s-]*sum)\b|"
+    r"\bminimum\s+additional\s+purchase\b|"
+    r"\briskometer\b|"
+    r"\bbenchmark\b|"
+    r"\block[\s-]*in\b",
     re.IGNORECASE,
 )
 INJECTION_PATTERNS = re.compile(

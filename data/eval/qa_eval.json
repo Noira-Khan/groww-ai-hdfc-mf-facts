@@ -1,10 +1,10 @@
 {
   "suite": "qa",
-  "generated_at": "2026-11-05T03:57:32+00:00",
+  "generated_at": "2026-11-05T13:51:05+00:00",
   "summary": {
     "factual_total": 11,
-    "factual_correct": 11,
-    "factual_accuracy": 1.0,
+    "factual_correct": 10,
+    "factual_accuracy": 0.9091,
     "factual_threshold": 0.9,
     "citation_total": 11,
     "citation_correct": 11,
@@ -31,7 +31,7 @@
       ],
       "source_url": "https://www.hdfcfund.com/explore/mutual-funds/hdfc-flexi-cap-fund/regular",
       "url_count": 1,
-      "answer": "The fund charges an Exit Load of 1.00% if units are redeemed or switched out within 1 year from the date of allotment, and no Exit Load is payable after 1 year.",
+      "answer": "The exit load is 1.00% if units are redeemed or switched out within 1 year from the date of allotment, and no exit load is payable after 1 year.",
       "proof": "In respect of each purchase / switch-in of Units, an Exit Load of 1.00% is payable if Units are redeemed / switched-out within 1 year from the date of allotment. No Exit Load is payable if Units are redeemed / switched-out after 1 year from the date of allotment.",
       "pii_leak": false
     },
@@ -70,7 +70,7 @@
       ],
       "source_url": "https://www.hdfcfund.com/explore/mutual-funds/hdfc-large-cap-fund/regular",
       "url_count": 1,
-      "answer": "The minimum SIP is ₹ 100.",
+      "answer": "The minimum SIP for HDFC Large Cap Fund is ₹ 100.",
       "proof": "Minimum SIP: ₹ 100",
       "pii_leak": false
     },
@@ -129,28 +129,28 @@
       ],
       "source_url": "https://www.hdfcfund.com/explore/mutual-funds/hdfc-mid-cap-fund/regular",
       "url_count": 1,
-      "answer": "The benchmark for HDFC Mid Cap Fund is the Nifty Midcap 150 Index TRI.",
+      "answer": "The benchmark of HDFC Mid Cap Fund is the Nifty Midcap 150 Index TRI.",
       "proof": "^Past performance may or may not be sustained in future and is not a guarantee of any future returns. # Nifty Midcap 150 Index TRI... Read More Click here to view performance of other schemes managed by the Fund Manager(s)",
       "pii_leak": false
     },
     {
       "id": "F07",
       "expected_type": "answer",
-      "actual_type": "answer",
-      "fact_hit": true,
+      "actual_type": "not_in_sources",
+      "fact_hit": false,
       "expected_facts": [
         "statement",
         "email"
       ],
-      "source_hit": true,
+      "source_hit": false,
       "expected_source_ids": [
         "hdfc_statement_guide",
         "hdfc_faq"
       ],
-      "source_url": "https://www.hdfcfund.com/services/additional-info/request-statement",
+      "source_url": "https://www.hdfcfund.com/mutual-funds/fund-documents/kim",
       "url_count": 1,
-      "answer": "You can request an account statement by entering your folio number in the provided box on the HDFC Fund website and selecting the desired delivery option.",
-      "proof": "We offer you the convenience of having your account statement sent to your email id registered with us. Please enter your folio number in the box provided below and choose the option in which you wish to receive your account statement.",
+      "answer": null,
+      "proof": null,
       "pii_leak": false
     },
     {
@@ -168,7 +168,7 @@
       ],
       "source_url": "https://www.hdfcfund.com/explore/mutual-funds/hdfc-elss-tax-saver-fund/direct",
       "url_count": 1,
-      "answer": "The riskometer is Very High.",
+      "answer": "The riskometer of HDFC ELSS Tax Saver is Very High.",
       "proof": "Riskometer: Very High",
       "pii_leak": false
     },
@@ -188,7 +188,7 @@
       ],
       "source_url": "https://www.hdfcfund.com/explore/mutual-funds/hdfc-flexi-cap-fund/regular",
       "url_count": 1,
-      "answer": "The fund charges an exit load of 1.00% if units are redeemed or switched out within 1 year of allotment, and no exit load after 1 year.",
+      "answer": "The fund charges an exit load of 1.00% if units are redeemed or switched out within 1 year of allotment, and no exit load thereafter.",
       "proof": "In respect of each purchase / switch-in of Units, an Exit Load of 1.00% is payable if Units are redeemed / switched-out within 1 year from the date of allotment. No Exit Load is payable if Units are redeemed / switched-out after 1 year from the date of allotment.",
       "pii_leak": false
     },
@@ -207,7 +207,7 @@
       ],
       "source_url": "https://www.hdfcfund.com/explore/mutual-funds/hdfc-large-cap-fund/regular",
       "url_count": 1,
-      "answer": "The minimum SIP is ₹ 100.",
+      "answer": "The minimum SIP for HDFC Large Cap Fund is ₹ 100.",
       "proof": "Minimum SIP: ₹ 100",
       "pii_leak": false
     },

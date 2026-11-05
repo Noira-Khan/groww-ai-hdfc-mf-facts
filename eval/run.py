@@ -302,13 +302,6 @@ def run_qa(
         if row.expected_type != "answer":
             continue
 
-        retrieval = retrieve(
-            config,
-            row.question,
-            scheme=row.primary_scheme,
-            model=model,
-            persist_debug=False,
-        )
         envelope = answer_question(
             config,
             row.question,
@@ -345,6 +338,14 @@ def run_qa(
         if actual_type == "answer":
             if count_sentences(answer) > config.app.max_answer_sentences:
                 sentence_violations += 1
+            # Retrieve only when validating grounded numbers for answered cases.
+            retrieval = retrieve(
+                config,
+                row.question,
+                scheme=row.primary_scheme,
+                model=model,
+                persist_debug=False,
+            )
             if retrieval.chunks:
                 validation = validate_candidate(
                     config,

@@ -11,13 +11,38 @@ from pathlib import Path
 
 from src.config import Config
 from src.ingest.embed import load_model
-from src.rag.topics import detect_topic
+from src.rag.topics import detect_topic, text_matches_topic
 from src.store.chroma import get_collection
 
 PREFERRED_DOC_TYPES = {"kim", "sid", "factsheet", "scheme_page"}
 LOWER_PRIORITY_DOC_TYPES = {"catalogue", "faq"}
 SOURCE_PREFERENCE_WINDOW = 0.05
 NEAR_DUPLICATE_RATIO = 0.95
+LEXICAL_BOOST_MAX = 0.05
+LOWER_PRIORITY_PENALTY = 0.02
+STOPWORDS = frozenset(
+    {
+        "a",
+        "an",
+        "and",
+        "do",
+        "for",
+        "how",
+        "i",
+        "in",
+        "is",
+        "my",
+        "of",
+        "or",
+        "the",
+        "to",
+        "what",
+        "when",
+        "where",
+        "which",
+        "with",
+    }
+)
 
 
 @dataclass
@@ -108,6 +133,77 @@ def _prefer_official_sources(chunks: list[RetrievedChunk]) -> list[RetrievedChun
     return ordered
 
 
+def _content_tokens(text: str) -> set[str]:
+    return {
+        token
+        for token in re.findall(r"[a-z0-9]+", (text or "").lower())
+        if len(token) > 2 and token not in STOPWORDS
+    }
+
+
+def _lexical_boost(question: str, chunk: RetrievedChunk) -> float:
+    query_tokens = _content_tokens(question)
+    if not query_tokens:
+        return 0.0
+    chunk_tokens = _content_tokens(f"{chunk.section} {chunk.text}")
+    if not chunk_tokens:
+        return 0.0
+    overlap = len(query_tokens & chunk_tokens) / len(query_tokens)
+    return LEXICAL_BOOST_MAX * overlap
+
+
+def _matches_topic(chunk: RetrievedChunk, topic: str | None) -> bool:
+    if not topic:
+        return False
+    meta_topic = chunk.metadata.get("topic")
+    if meta_topic == topic:
+        return True
+    # Chunk body is the strongest fallback when metadata is missing or generic.
+    if text_matches_topic(topic, chunk.text):
+        return True
+    if meta_topic in (None, "", "general") and text_matches_topic(
+        topic, chunk.section
+    ):
+        return True
+    return False
+
+
+def _select_context(
+    chunks: list[RetrievedChunk],
+    limit: int,
+    detected_topic: str | None = None,
+) -> list[RetrievedChunk]:
+    """Pick top context with source diversity and a topic-matched slot when possible."""
+    if limit <= 0 or not chunks:
+        return []
+
+    selected: list[RetrievedChunk] = []
+    seen_sources: set[str] = set()
+
+    def _source_key(chunk: RetrievedChunk) -> str:
+        return str(chunk.metadata.get("source_id") or chunk.chunk_id)
+
+    def _take(pool: list[RetrievedChunk], *, unique_source: bool) -> None:
+        for chunk in pool:
+            if chunk in selected:
+                continue
+            key = _source_key(chunk)
+            if unique_source and key in seen_sources:
+                continue
+            selected.append(chunk)
+            seen_sources.add(key)
+            if len(selected) >= limit:
+                return
+
+    topic_hits = [chunk for chunk in chunks if _matches_topic(chunk, detected_topic)]
+    if topic_hits:
+        _take(topic_hits[:1], unique_source=True)
+    _take(chunks, unique_source=True)
+    if len(selected) < limit:
+        _take(chunks, unique_source=False)
+    return selected
+
+
 def _request_id(question: str, scheme: str | None) -> str:
     payload = f"{question.strip().lower()}|{scheme or ''}".encode("utf-8")
     return hashlib.sha256(payload).hexdigest()[:16]
@@ -165,16 +261,24 @@ def retrieve(
         )
 
     detected_topic = detect_topic(question)
-    if detected_topic and config.retrieval.topic_boost > 0:
-        for chunk in candidates:
-            if chunk.metadata.get("topic") == detected_topic:
+    for chunk in candidates:
+        doc_type = chunk.metadata.get("doc_type", "")
+        if doc_type in LOWER_PRIORITY_DOC_TYPES:
+            chunk.score -= LOWER_PRIORITY_PENALTY
+        chunk.score += _lexical_boost(question, chunk)
+        if detected_topic and config.retrieval.topic_boost > 0:
+            if _matches_topic(chunk, detected_topic):
                 chunk.score += config.retrieval.topic_boost
 
     candidates.sort(key=lambda chunk: chunk.score, reverse=True)
     before_dedupe = len(candidates)
     deduped = _dedupe(candidates)
     preferred = _prefer_official_sources(deduped)
-    selected = preferred[: config.retrieval.max_context_chunks]
+    selected = _select_context(
+        preferred,
+        config.retrieval.max_context_chunks,
+        detected_topic=detected_topic,
+    )
 
     debug = {
         "request_id": _request_id(question, scheme),
@@ -202,9 +306,7 @@ def retrieve(
                 "scheme": chunk.metadata.get("scheme"),
                 "topic": chunk.metadata.get("topic"),
                 "topic_match": (
-                    chunk.metadata.get("topic") == detected_topic
-                    if detected_topic
-                    else None
+                    _matches_topic(chunk, detected_topic) if detected_topic else None
                 ),
                 "section": chunk.section,
             }

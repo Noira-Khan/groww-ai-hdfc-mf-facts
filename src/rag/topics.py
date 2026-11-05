@@ -7,7 +7,10 @@ import re
 from src.safety.intent import SCHEME_LABELS, SUPPORTED_SCHEMES
 
 TOPIC_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("exit_load", re.compile(r"\bexit[\s-]*load\b", re.IGNORECASE)),
+    (
+        "exit_load",
+        re.compile(r"\bexit[\s-]*load\b", re.IGNORECASE),
+    ),
     (
         "expense_ratio",
         re.compile(r"\b(?:total\s+)?expense\s*ratio\b|\bter\b", re.IGNORECASE),
@@ -15,7 +18,9 @@ TOPIC_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "min_sip",
         re.compile(
-            r"\bmin(?:imum)?\s+(?:sip|investment|lump[\s-]*sum|application)\b|"
+            r"\bmin(?:imum)?\s+(?:sip|investment|purchase|"
+            r"lump[\s-]*sum|application)\b|"
+            r"\bmin(?:imum)?\s+additional\s+purchase\b|"
             r"\bmin(?:imum)?\s+amount\b",
             re.IGNORECASE,
         ),
@@ -60,6 +65,8 @@ SCHEME_SENSITIVE_TOPICS = frozenset(
     }
 )
 
+_TOPIC_PATTERN_MAP = {name: pattern for name, pattern in TOPIC_PATTERNS}
+
 
 def detect_topic(question: str) -> str | None:
     """Return the first known fact topic mentioned in the question."""
@@ -68,6 +75,17 @@ def detect_topic(question: str) -> str | None:
         if pattern.search(text):
             return topic
     return None
+
+
+def text_matches_topic(topic: str, *parts: str) -> bool:
+    """True when any text/section part mentions the detected topic."""
+    pattern = _TOPIC_PATTERN_MAP.get(topic)
+    if pattern is None:
+        return False
+    haystack = "\n".join(part for part in parts if part)
+    if not haystack:
+        return False
+    return pattern.search(haystack) is not None
 
 
 def scheme_topic_question(topic: str, scheme: str) -> str | None:

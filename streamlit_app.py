@@ -1,45 +1,88 @@
 """Streamlit frontend for the HDFC MF Facts assistant.
 
 The app shell renders immediately. Configuration is loaded quickly, while the
-
 embedding model and knowledge base are initialized only when needed, with
-
 visible stage-level progress. Suggested questions prefill the editable composer.
 
-Answer generation still uses the shared
+Answer generation uses ``src.services.chat.process_question``, so safety
+controls and validation match the FastAPI app.
 
-``src.services.chat.process_question`` path, so all safety controls and
-
-validation behave exactly like the FastAPI app.
-
+Deploy notes (Streamlit Community Cloud):
+- Main file: ``streamlit_app.py``
+- Python version: 3.13 (Advanced settings)
+- Secrets: ``GROQ_API_KEY``, ``LLM_MODEL_ID`` (see ``.streamlit/secrets.toml.example``)
+- First cold start builds the corpus; use **Initialize knowledge base**
 """
+
 from __future__ import annotations
+
 import os
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from textwrap import dedent
 from typing import Any
+
 import streamlit as st
-st.set_page_config(page_title='HDFC MF Facts', page_icon='🌱', layout='centered', initial_sidebar_state='collapsed')
+
+st.set_page_config(
+    page_title="HDFC MF Facts",
+    page_icon="🌱",
+    layout="centered",
+    initial_sidebar_state="collapsed",
+)
+
 from src.config import Config, load_config, validate_runtime
 from src.logging import get_logger, safe_log
 from src.services.kb_state import artifacts_present
 from src.suggestions import DEFAULT_SUGGESTIONS
+
 PROJECT_ROOT = Path(__file__).resolve().parent
-CONFIG_PATH = PROJECT_ROOT / 'config.yaml'
-SECRET_ENV_KEYS = ('GROQ_API_KEY', 'GEMINI_API_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'MISTRAL_API_KEY', 'LLM_MODEL_ID', 'LLM_PROVIDER', 'CACHE_SALT', 'HF_TOKEN')
-TYPE_LABELS = {'answer': 'ANSWER FROM OFFICIAL SOURCES', 'refusal_advice': 'FACTS-ONLY ASSISTANT', 'refusal_performance': 'FACTS-ONLY ASSISTANT', 'not_in_sources': 'OUTSIDE CURATED SOURCES', 'clarify': 'SPECIFY A SCHEME', 'pii': 'PRIVACY PROTECTION', 'error': 'SOMETHING WENT WRONG'}
-TYPE_TAGS = {'refusal_advice': 'No advice or recommendations.', 'refusal_performance': 'No return or performance views.', 'not_in_sources': 'Only curated official documents are used.', 'clarify': 'Scheme context is required for this fact.', 'pii': 'Personal data is not shown, logged, or stored.', 'error': 'No unverified answer is shown.'}
-DISCLAIMER = 'This assistant shares factual information from official HDFC AMC, SEBI, and AMFI sources only. It does not provide investment advice, recommendations, or performance comparisons. Mutual fund investments are subject to market risks; read all scheme-related documents carefully.'
-GITHUB_URL = 'https://github.com/Noira-Khan/groww-ai-hdfc-mf-facts'
-logger = get_logger('streamlit')
+CONFIG_PATH = PROJECT_ROOT / "config.yaml"
+SECRET_ENV_KEYS = (
+    "GROQ_API_KEY",
+    "GEMINI_API_KEY",
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "MISTRAL_API_KEY",
+    "LLM_MODEL_ID",
+    "LLM_PROVIDER",
+    "CACHE_SALT",
+    "HF_TOKEN",
+)
+TYPE_LABELS = {
+    "answer": "ANSWER FROM OFFICIAL SOURCES",
+    "refusal_advice": "FACTS-ONLY ASSISTANT",
+    "refusal_performance": "FACTS-ONLY ASSISTANT",
+    "not_in_sources": "OUTSIDE CURATED SOURCES",
+    "clarify": "SPECIFY A SCHEME",
+    "pii": "PRIVACY PROTECTION",
+    "error": "SOMETHING WENT WRONG",
+}
+TYPE_TAGS = {
+    "refusal_advice": "No advice or recommendations.",
+    "refusal_performance": "No return or performance views.",
+    "not_in_sources": "Only curated official documents are used.",
+    "clarify": "Scheme context is required for this fact.",
+    "pii": "Personal data is not shown, logged, or stored.",
+    "error": "No unverified answer is shown.",
+}
+DISCLAIMER = (
+    "This assistant shares factual information from official HDFC AMC, SEBI, and "
+    "AMFI sources only. It does not provide investment advice, recommendations, "
+    "or performance comparisons. Mutual fund investments are subject to market "
+    "risks; read all scheme-related documents carefully."
+)
+GITHUB_URL = "https://github.com/Noira-Khan/groww-ai-hdfc-mf-facts"
+logger = get_logger("streamlit")
+
 
 @dataclass
 class Runtime:
     config: Config | None = None
     error: str | None = None
     warnings: tuple[str, ...] = field(default_factory=tuple)
+
 
 def _secret_value(name: str) -> str | None:
     try:
@@ -51,12 +94,19 @@ def _secret_value(name: str) -> str | None:
     text = str(value).strip()
     return text or None
 
+
 def _apply_secrets() -> None:
     """Copy deploy-time secrets into the environment before config loading."""
     for name in SECRET_ENV_KEYS:
         value = _secret_value(name)
         if value:
             os.environ[name] = value
+
+
+# Apply Streamlit secrets as early as possible so load_config / provider checks
+# see the same environment on Community Cloud as local .env does.
+_apply_secrets()
+
 
 @st.cache_resource(show_spinner=False)
 def get_runtime() -> Runtime:
@@ -65,21 +115,24 @@ def get_runtime() -> Runtime:
     try:
         config = load_config(CONFIG_PATH)
     except Exception as exc:
-        return Runtime(error=f'Configuration could not be loaded: {exc}')
+        return Runtime(error=f"Configuration could not be loaded: {exc}")
     try:
         warnings = tuple(validate_runtime(config))
     except Exception as exc:
-        return Runtime(config=config, error=f'Configuration is invalid: {exc}')
+        return Runtime(config=config, error=f"Configuration is invalid: {exc}")
     return Runtime(config=config, warnings=warnings)
+
 
 @st.cache_resource(show_spinner=False)
 def get_model() -> Any:
     """Load and cache the embedding model without blocking the initial shell."""
     runtime = get_runtime()
     if runtime.config is None:
-        raise RuntimeError('Configuration is not available.')
+        raise RuntimeError("Configuration is not available.")
     from src.ingest.embed import load_model
+
     return load_model(runtime.config)
+
 
 @st.cache_resource(show_spinner=False)
 def get_knowledge_base() -> bool:
@@ -88,7 +141,9 @@ def get_knowledge_base() -> bool:
     if runtime.config is None:
         return False
     from src.services.knowledge_base import collection_ready
+
     return collection_ready(runtime.config)
+
 
 @st.cache_data(show_spinner=False)
 def get_suggested_questions() -> tuple[str, ...]:
@@ -97,41 +152,46 @@ def get_suggested_questions() -> tuple[str, ...]:
     if runtime.config is None:
         return DEFAULT_SUGGESTIONS
     from src.rag.suggestions import resolve_suggestions
+
     return tuple(resolve_suggestions(runtime.config, limit=6))
+
 
 def _source_link(url: str, name: str | None) -> None:
     from src.rag.validate import is_allowlisted_url
-    label = name or 'Official source'
+
+    label = name or "Official source"
     if is_allowlisted_url(url):
-        st.markdown(f'**Official source:** [{label}]({url})')
+        st.markdown(f"**Official source:** [{label}]({url})")
     else:
-        st.markdown('**Official source:**')
+        st.markdown("**Official source:**")
         st.text(url)
 
+
 def _render_answer_body(envelope: dict[str, Any]) -> None:
-    response_type = str(envelope.get('type') or 'error')
-    answer = str(envelope.get('answer') or '')
-    st.caption(TYPE_LABELS.get(response_type, 'RESPONSE'))
-    if response_type == 'answer':
+    response_type = str(envelope.get("type") or "error")
+    answer = str(envelope.get("answer") or "")
+    st.caption(TYPE_LABELS.get(response_type, "RESPONSE"))
+    if response_type == "answer":
         st.markdown(answer)
-    elif response_type == 'clarify':
+    elif response_type == "clarify":
         st.info(answer)
-    elif response_type == 'error':
+    elif response_type == "error":
         st.error(answer)
     else:
         st.warning(answer)
     tag = TYPE_TAGS.get(response_type)
     if tag:
         st.caption(tag)
-    source_url = envelope.get('source_url')
+    source_url = envelope.get("source_url")
     if isinstance(source_url, str) and source_url.strip():
-        _source_link(source_url.strip(), envelope.get('source_name'))
-    source_date = envelope.get('as_on_date') or envelope.get('retrieved_at')
+        _source_link(source_url.strip(), envelope.get("source_name"))
+    source_date = envelope.get("as_on_date") or envelope.get("retrieved_at")
     st.caption(f"Source date: {source_date or 'Not provided'}")
-    proof = envelope.get('proof')
+    proof = envelope.get("proof")
     if isinstance(proof, str) and proof.strip():
-        st.markdown('**Verbatim proof passage**')
+        st.markdown("**Verbatim proof passage**")
         st.code(proof, language=None)
+
 
 def _queue_followup(question: str) -> None:
     """Prefill the editable composer with a suggested question."""
@@ -139,22 +199,29 @@ def _queue_followup(question: str) -> None:
     st.session_state["question_input"] = question
     st.rerun()
 
+
 def _render_followups(questions: Any, key_prefix: str) -> None:
     if not isinstance(questions, list) or not questions:
         return
-    safe_questions = [item for item in questions[:6] if isinstance(item, str) and item.strip()]
+    safe_questions = [
+        item for item in questions[:6] if isinstance(item, str) and item.strip()
+    ]
     if not safe_questions:
         return
-    st.caption('Explore official facts')
+    st.caption("Explore official facts")
     for index, question in enumerate(safe_questions):
-        if st.button(question, key=f'{key_prefix}_followup_{index}'):
+        if st.button(question, key=f"{key_prefix}_followup_{index}"):
             _queue_followup(question)
 
-def _render_assistant(envelope: dict[str, Any], key_prefix: str, show_followups: bool) -> None:
-    with st.chat_message('assistant'):
+
+def _render_assistant(
+    envelope: dict[str, Any], key_prefix: str, show_followups: bool
+) -> None:
+    with st.chat_message("assistant"):
         _render_answer_body(envelope)
         if show_followups:
-            _render_followups(envelope.get('can_do'), key_prefix)
+            _render_followups(envelope.get("can_do"), key_prefix)
+
 
 def _render_history() -> None:
     """Show the latest exchange immediately and keep older turns collapsible."""
@@ -188,58 +255,92 @@ def _render_history() -> None:
     for index in range(latest_start, len(messages)):
         render_message(index, messages[index])
 
+
 def _render_config_error(runtime: Runtime) -> None:
-    st.error('The assistant is not configured correctly.')
+    st.error("The assistant is not configured correctly.")
     if runtime.error:
-        st.markdown(f'**Details:** {runtime.error}')
-    if st.button('Reload configuration'):
+        st.markdown(f"**Details:** {runtime.error}")
+    st.info(
+        "On Streamlit Community Cloud, set `GROQ_API_KEY` and `LLM_MODEL_ID` in "
+        "**App settings → Secrets**. Locally, put them in `.env` or "
+        "`.streamlit/secrets.toml`."
+    )
+    if st.button("Reload configuration"):
         st.cache_resource.clear()
         st.rerun()
 
+
 def _render_setup(config: Config) -> None:
-    st.warning('The official knowledge base has not been built in this deployment yet. It is created once from the curated HDFC AMC, SEBI, and AMFI sources.')
-    st.markdown('**What happens when you initialize:**\n1. Load the local embedding model.\n2. Download the official documents, with live progress.\n3. Normalize and chunk the documents.\n4. Embed the chunks and build the Chroma index.\n5. Validate the index before the assistant can answer.')
-    st.caption('The first run can take several minutes. The page stays responsive and each stage reports its own progress.')
-    if st.button('Initialize knowledge base', type='primary', key='initialize_kb'):
+    st.warning(
+        "The official knowledge base has not been built in this deployment yet. "
+        "It is created once from the curated HDFC AMC, SEBI, and AMFI sources."
+    )
+    st.markdown(
+        "**What happens when you initialize:**\n"
+        "1. Load the local embedding model.\n"
+        "2. Download the official documents, with live progress.\n"
+        "3. Normalize and chunk the documents.\n"
+        "4. Embed the chunks and build the Chroma index.\n"
+        "5. Validate the index before the assistant can answer."
+    )
+    st.caption(
+        "The first run can take several minutes. The page stays responsive and "
+        "each stage reports its own progress. On Streamlit Community Cloud the "
+        "filesystem is ephemeral, so a reboot may require re-initialization."
+    )
+    if st.button("Initialize knowledge base", type="primary", key="initialize_kb"):
         _run_initialization(config, force=False)
 
-def _run_initialization(config: Config, force: bool=False) -> None:
+
+def _run_initialization(config: Config, force: bool = False) -> None:
     from src.services.knowledge_base import KnowledgeBaseError, ensure_knowledge_base
-    progress_bar = st.progress(0.0, text='Starting knowledge-base initialization…')
-    status = st.status('Initializing the knowledge base…', expanded=True)
-    last_stage = {'name': None}
+
+    progress_bar = st.progress(0.0, text="Starting knowledge-base initialization…")
+    status = st.status("Initializing the knowledge base…", expanded=True)
+    last_stage = {"name": None}
 
     def on_progress(stage: str, fraction: float, message: str) -> None:
         safe_fraction = max(0.0, min(1.0, float(fraction)))
         progress_bar.progress(safe_fraction, text=message)
         status.update(label=message)
-        if stage != last_stage['name']:
+        if stage != last_stage["name"]:
             status.write(message)
-            last_stage['name'] = stage
+            last_stage["name"] = stage
+
     try:
-        on_progress('model', 0.02, 'Loading the embedding model…')
+        on_progress("model", 0.02, "Loading the embedding model…")
         model_started = time.perf_counter()
         model = get_model()
-        safe_log(logger, 'kb_stage', stage='model', status='ok', latency_ms=int((time.perf_counter() - model_started) * 1000))
-        on_progress('model', 0.12, 'Embedding model ready.')
+        safe_log(
+            logger,
+            "kb_stage",
+            stage="model",
+            status="ok",
+            latency_ms=int((time.perf_counter() - model_started) * 1000),
+        )
+        on_progress("model", 0.12, "Embedding model ready.")
 
         def kb_progress(stage: str, fraction: float, message: str) -> None:
             on_progress(stage, 0.12 + 0.88 * fraction, message)
-        ensure_knowledge_base(config, model=model, progress=kb_progress, force=force)
+
+        ensure_knowledge_base(
+            config, model=model, progress=kb_progress, force=force
+        )
     except KnowledgeBaseError as exc:
-        status.update(label='Knowledge-base initialization failed', state='error')
+        status.update(label="Knowledge-base initialization failed", state="error")
         st.error(str(exc))
-        st.info('Check the deployment logs for the failing stage, then retry.')
+        st.info("Check the deployment logs for the failing stage, then retry.")
         return
     except Exception as exc:
-        status.update(label='Knowledge-base initialization failed', state='error')
-        st.error(f'Knowledge-base initialization failed unexpectedly. ({exc})')
+        status.update(label="Knowledge-base initialization failed", state="error")
+        st.error(f"Knowledge-base initialization failed unexpectedly. ({exc})")
         return
-    status.update(label='Knowledge base ready', state='complete')
-    progress_bar.progress(1.0, text='Knowledge base ready.')
+    status.update(label="Knowledge base ready", state="complete")
+    progress_bar.progress(1.0, text="Knowledge base ready.")
     get_knowledge_base.clear()
     get_suggested_questions.clear()
     st.rerun()
+
 
 def _render_chat_input(runtime: Runtime) -> None:
     """Render an editable composer and process each explicit submission."""
@@ -342,16 +443,18 @@ def _render_chat_input(runtime: Runtime) -> None:
     st.session_state["_clear_question_input"] = True
     st.rerun()
 
+
 def _inject_ui_styles() -> None:
     """Apply the visual system used by the HDFC MF Facts reference layout."""
     st.markdown(
-        dedent("""
+        dedent(
+            """
         <style>
         [data-testid="stAppViewContainer"] {
             background: #ffffff;
         }
         [data-testid="stHeader"] {
-            background: rgba(255, 255, 255, 0.96);
+            background: rgba(255, 255, 255, 0.98);
         }
         [data-testid="stMainBlockContainer"] {
             width: min(900px, calc(100vw - 2rem)) !important;
@@ -360,12 +463,6 @@ def _inject_ui_styles() -> None:
             margin-right: auto !important;
             padding-top: 2.5rem !important;
             padding-bottom: 7.5rem !important;
-        }
-        [data-testid="stAppViewContainer"] {
-            background: #ffffff;
-        }
-        [data-testid="stHeader"] {
-            background: rgba(255, 255, 255, 0.98);
         }
         [data-testid="stForm"] {
             position: sticky;
@@ -424,7 +521,8 @@ def _inject_ui_styles() -> None:
             border-radius: 14px;
         }
         </style>
-        """),
+        """
+        ),
         unsafe_allow_html=True,
     )
 
@@ -435,7 +533,8 @@ def render_header() -> None:
 
     with brand:
         st.markdown(
-            dedent("""
+            dedent(
+                """
                 <div style="
                     display:flex;
                     align-items:center;
@@ -469,13 +568,15 @@ def render_header() -> None:
                         ">Mutual fund facts, made clear</div>
                     </div>
                 </div>
-            """),
+            """
+            ),
             unsafe_allow_html=True,
         )
 
     with actions:
         st.markdown(
-            dedent(f"""
+            dedent(
+                f"""
                 <div style="
                     display:flex;
                     justify-content:flex-end;
@@ -500,7 +601,8 @@ def render_header() -> None:
                         GitHub ↗
                     </a>
                 </div>
-            """),
+            """
+            ),
             unsafe_allow_html=True,
         )
 
@@ -510,7 +612,8 @@ def render_header() -> None:
 def render_hero() -> None:
     """Render the centered introduction from the supplied UI reference."""
     st.markdown(
-        dedent("""
+        dedent(
+            """
         <div style="max-width:700px;margin:30px auto 24px;text-align:center;">
             <div style="color:#079c68;font-size:11px;font-weight:800;
                 letter-spacing:2px;margin-bottom:14px;">
@@ -530,7 +633,8 @@ def render_hero() -> None:
                 Hi! Ask me facts about HDFC Mutual Fund schemes.
             </div>
         </div>
-        """),
+        """
+        ),
         unsafe_allow_html=True,
     )
 
@@ -540,7 +644,7 @@ def render_examples() -> None:
     st.markdown("### Try asking")
     questions = list(get_suggested_questions())[:6]
     for row_index in range(0, len(questions), 3):
-        row = questions[row_index:row_index + 3]
+        row = questions[row_index : row_index + 3]
         columns = st.columns(3, gap="small")
         for column_index, question in enumerate(row):
             with columns[column_index]:
@@ -555,7 +659,8 @@ def render_examples() -> None:
 def render_empty_answer_state() -> None:
     """Render the neutral answer placeholder before the first question."""
     st.markdown(
-        dedent("""
+        dedent(
+            """
         <div style="text-align:center;padding:28px 12px 16px;">
             <div style="width:34px;height:34px;margin:0 auto 8px;
                 border:1px solid #e1eae4;border-radius:11px;
@@ -576,7 +681,8 @@ def render_empty_answer_state() -> None:
                 Choose an example above or type a question below.
             </div>
         </div>
-        """),
+        """
+        ),
         unsafe_allow_html=True,
     )
 
@@ -604,9 +710,16 @@ def main() -> None:
         return
 
     if runtime.warnings:
-        with st.expander("Deployment notes", expanded=False):
+        with st.expander("Deployment notes", expanded=True):
             for warning in runtime.warnings:
                 st.warning(warning)
+            st.caption(
+                "Add the missing values in Streamlit Secrets (or local `.env`), "
+                "then click **Reload configuration** below or reboot the app."
+            )
+            if st.button("Reload configuration", key="reload_after_warnings"):
+                st.cache_resource.clear()
+                st.rerun()
 
     if not artifacts_present(runtime.config):
         if not st.session_state.messages:
