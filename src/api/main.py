@@ -356,6 +356,13 @@ def create_app(config: Config | None = None, warmup: bool = True) -> FastAPI:
         inventory = _source_inventory(cfg)
         return {"count": len(inventory), "sources": inventory}
 
+    @app.get("/api/suggestions")
+    async def suggestions():
+        from src.rag.suggestions import resolve_suggestions
+
+        questions = resolve_suggestions(cfg, limit=6)
+        return {"count": len(questions), "suggestions": questions}
+
     @app.get("/api/pipeline")
     async def pipeline():
         return _pipeline_summary(cfg)

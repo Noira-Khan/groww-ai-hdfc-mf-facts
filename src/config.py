@@ -91,8 +91,11 @@ class RetrievalConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     top_k: int = Field(default=5, ge=1, le=50)
+    candidate_pool: int = Field(default=20, ge=1, le=100)
     score_threshold: float = Field(default=0.35, ge=0.0, le=1.0)
     max_context_chunks: int = Field(default=3, ge=1, le=10)
+    topic_boost: float = Field(default=0.12, ge=0.0, le=1.0)
+    suggestion_score_threshold: float = Field(default=0.55, ge=0.0, le=1.0)
 
 
 class LLMConfig(BaseModel):

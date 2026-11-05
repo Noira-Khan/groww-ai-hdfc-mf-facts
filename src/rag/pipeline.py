@@ -13,14 +13,9 @@ from src.rag.retrieve import RetrievalResult, retrieve
 from src.rag.validate import validate_candidate
 from src.safety.intent import SCHEME_LABELS, classify_question
 from src.safety.responses import pii_response
+from src.suggestions import SAFE_QUESTIONS
 
 SCHEME_DOCUMENTS_URL = "https://www.hdfcfund.com/mutual-funds/fund-documents/kim"
-
-SUGGESTED_QUESTIONS = [
-    "What is the exit load of HDFC Flexi Cap Fund?",
-    "What is the lock-in period of HDFC ELSS Tax Saver?",
-    "How do I download my capital-gains statement?",
-]
 
 
 def _focus_question(
@@ -52,7 +47,7 @@ def _not_in_sources_envelope(request_id: str) -> dict[str, Any]:
         "source_name": "HDFC AMC",
         "as_on_date": None,
         "proof": None,
-        "can_do": list(SUGGESTED_QUESTIONS),
+        "can_do": list(SAFE_QUESTIONS),
         "chunks_used": [],
         "request_id": request_id,
     }
@@ -125,6 +120,16 @@ def answer_question(
 
     if not retrieval.chunks:
         return _not_in_sources_envelope(request_id)
+
+    detected_topic = retrieval.debug.get("detected_topic")
+    if detected_topic:
+        chunk_topics = {
+            chunk.metadata.get("topic")
+            for chunk in retrieval.chunks
+            if chunk.metadata.get("topic")
+        }
+        if chunk_topics and detected_topic not in chunk_topics:
+            return _not_in_sources_envelope(request_id)
 
     try:
         generation = _generate_with_retry(

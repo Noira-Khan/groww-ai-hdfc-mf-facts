@@ -134,6 +134,28 @@ def test_retrieve_debug_excludes_raw_question(config, monkeypatch):
     assert "UniqueQuestionToken" not in trace.read_text(encoding="utf-8")
 
 
+def test_retrieve_boosts_matching_topic_over_generic_definition(
+    config, monkeypatch
+):
+    _install(
+        monkeypatch,
+        [
+            _row("defs", 0.20, "A definition.", topic="definitions"),
+            _row("exit", 0.30, "Exit load details.", topic="exit_load"),
+        ],
+    )
+
+    result = retrieve(
+        config, "What is the exit load of HDFC ELSS Tax Saver?", model=FakeModel()
+    )
+
+    assert result.debug["detected_topic"] == "exit_load"
+    assert [chunk.chunk_id for chunk in result.chunks] == ["exit", "defs"]
+    assert result.chunks[0].raw_score == pytest.approx(0.70)
+    assert result.chunks[0].score == pytest.approx(0.82)
+    assert result.debug["candidates"][0]["topic_match"] is True
+
+
 def test_retrieved_chunk_accessors():
     chunk = RetrievedChunk(
         chunk_id="a",

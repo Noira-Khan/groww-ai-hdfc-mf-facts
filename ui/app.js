@@ -39,7 +39,6 @@
   const input = document.getElementById("question-input");
   const sendButton = document.getElementById("send-button");
   const chips = Array.from(document.querySelectorAll("[data-scheme]"));
-  const examples = Array.from(document.querySelectorAll("[data-question]"));
 
   function element(tag, className, text) {
     const node = document.createElement(tag);
@@ -143,7 +142,7 @@
       chip.addEventListener("click", () => {
         setSelectedScheme(null);
         input.value = question;
-        ask(question);
+        input.focus({ preventScroll: true });
       });
       list.append(chip);
     });
@@ -255,7 +254,7 @@
     state.controller = controller;
     const requestNumber = ++state.requestNumber;
 
-    input.value = question;
+    input.value = "";
     showLoading();
     setBusy(true);
 
@@ -585,14 +584,40 @@
     });
   });
 
-  examples.forEach((example) => {
+  function bindExample(example) {
     example.addEventListener("click", () => {
       setSelectedScheme(null);
       const question = example.dataset.question || example.textContent || "";
       input.value = question;
-      ask(question);
+      input.focus({ preventScroll: true });
     });
-  });
+  }
+
+  async function loadExamples() {
+    const grid = document.querySelector(".example-grid");
+    if (!grid) return;
+    try {
+      const response = await fetch("/api/suggestions");
+      if (!response.ok) return;
+      const data = await response.json();
+      const questions = Array.isArray(data.suggestions)
+        ? data.suggestions.filter((item) => typeof item === "string" && item.trim())
+        : [];
+      if (!questions.length) return;
+      const buttons = questions.slice(0, 6).map((question) => {
+        const button = element("button", "example", question);
+        button.type = "button";
+        button.dataset.question = question;
+        bindExample(button);
+        return button;
+      });
+      grid.replaceChildren(...buttons);
+    } catch (_error) {
+      return;
+    }
+  }
+
+  document.querySelectorAll("[data-question]").forEach(bindExample);
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -630,6 +655,7 @@
     }
   }
 
+  loadExamples();
   loadDisclaimer();
   showEmpty();
 })();

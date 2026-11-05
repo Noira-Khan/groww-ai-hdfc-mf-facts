@@ -25,6 +25,7 @@ st.set_page_config(page_title='HDFC MF Facts', page_icon='🌱', layout='centere
 from src.config import Config, load_config, validate_runtime
 from src.logging import get_logger, safe_log
 from src.services.kb_state import artifacts_present
+from src.suggestions import DEFAULT_SUGGESTIONS
 PROJECT_ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = PROJECT_ROOT / 'config.yaml'
 SECRET_ENV_KEYS = ('GROQ_API_KEY', 'GEMINI_API_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'MISTRAL_API_KEY', 'LLM_MODEL_ID', 'LLM_PROVIDER', 'CACHE_SALT', 'HF_TOKEN')
@@ -32,7 +33,6 @@ TYPE_LABELS = {'answer': 'ANSWER FROM OFFICIAL SOURCES', 'refusal_advice': 'FACT
 TYPE_TAGS = {'refusal_advice': 'No advice or recommendations.', 'refusal_performance': 'No return or performance views.', 'not_in_sources': 'Only curated official documents are used.', 'clarify': 'Scheme context is required for this fact.', 'pii': 'Personal data is not shown, logged, or stored.', 'error': 'No unverified answer is shown.'}
 DISCLAIMER = 'This assistant shares factual information from official HDFC AMC, SEBI, and AMFI sources only. It does not provide investment advice, recommendations, or performance comparisons. Mutual fund investments are subject to market risks; read all scheme-related documents carefully.'
 GITHUB_URL = 'https://github.com/Noira-Khan/groww-ai-hdfc-mf-facts'
-SUGGESTED_QUESTIONS = ['What is NAV in a mutual fund?', 'What is the lock-in period of HDFC ELSS Tax Saver Fund?', 'What is the riskometer of HDFC Mid Cap Fund?', 'What is the benchmark of HDFC Large Cap Fund?', 'What is the benchmark of HDFC Flexi Cap Fund?', 'What is the exit load of HDFC Flexi Cap Fund?']
 logger = get_logger('streamlit')
 
 @dataclass
@@ -89,6 +89,15 @@ def get_knowledge_base() -> bool:
         return False
     from src.services.knowledge_base import collection_ready
     return collection_ready(runtime.config)
+
+@st.cache_data(show_spinner=False)
+def get_suggested_questions() -> tuple[str, ...]:
+    """Load only questions that were verified against the current corpus."""
+    runtime = get_runtime()
+    if runtime.config is None:
+        return DEFAULT_SUGGESTIONS
+    from src.rag.suggestions import resolve_suggestions
+    return tuple(resolve_suggestions(runtime.config, limit=6))
 
 def _source_link(url: str, name: str | None) -> None:
     from src.rag.validate import is_allowlisted_url
@@ -229,6 +238,7 @@ def _run_initialization(config: Config, force: bool=False) -> None:
     status.update(label='Knowledge base ready', state='complete')
     progress_bar.progress(1.0, text='Knowledge base ready.')
     get_knowledge_base.clear()
+    get_suggested_questions.clear()
     st.rerun()
 
 def _render_chat_input(runtime: Runtime) -> None:
@@ -526,12 +536,13 @@ def render_hero() -> None:
 
 
 def render_examples() -> None:
-    """Render six clickable example questions in the reference card grid."""
+    """Render six clickable, verified example questions."""
     st.markdown("### Try asking")
-    for row_index in range(2):
-        questions = SUGGESTED_QUESTIONS[row_index * 3:(row_index + 1) * 3]
+    questions = list(get_suggested_questions())[:6]
+    for row_index in range(0, len(questions), 3):
+        row = questions[row_index:row_index + 3]
         columns = st.columns(3, gap="small")
-        for column_index, question in enumerate(questions):
+        for column_index, question in enumerate(row):
             with columns[column_index]:
                 if st.button(
                     question + "  ↗",

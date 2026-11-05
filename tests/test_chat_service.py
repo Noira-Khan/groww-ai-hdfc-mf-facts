@@ -105,7 +105,9 @@ def test_multi_scheme_adds_followups(config):
     )
 
     assert result.envelope["type"] == "answer"
-    assert result.envelope["can_do"] == ["What about HDFC Mid Cap Fund?"]
+    assert result.envelope["can_do"] == [
+        "What is the exit load of HDFC Mid Cap Fund?"
+    ]
 
 
 def test_unavailable_pipeline_raises_typed_error(config):

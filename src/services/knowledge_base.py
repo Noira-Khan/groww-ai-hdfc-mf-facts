@@ -86,6 +86,19 @@ def _run_stage(
     return result
 
 
+def _ensure_suggestions(config: Config, model: Any, progress: ProgressCallback | None) -> None:
+    if model is None:
+        return
+    try:
+        from src.rag.suggestions import load_suggestions, write_suggestions
+
+        if load_suggestions(config) is not None:
+            return
+        write_suggestions(config, model=model)
+    except Exception:
+        safe_log(logger, "kb_stage", stage="suggest", status="failed")
+
+
 def _build_missing_corpus(
     config: Config,
     model: Any,
@@ -234,6 +247,8 @@ def _build_missing_corpus(
             f"Knowledge-base validation failed. ({exc})"
         ) from exc
 
+    _ensure_suggestions(config, model, progress)
+
 
 def ensure_knowledge_base(
     config: Config,
@@ -258,5 +273,6 @@ def ensure_knowledge_base(
         )
         if ready:
             _emit(progress, "validate", 1.0, "Knowledge base ready.")
+            _ensure_suggestions(config, model, progress)
             return
     _build_missing_corpus(config, model, progress, force_index=force)

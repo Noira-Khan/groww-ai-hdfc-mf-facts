@@ -16,7 +16,7 @@ from src.ingest.loader import run_load
 from src.ingest.normalize import run_normalize
 from src.store.chroma import run_index
 
-IMPLEMENTED_STAGES = {"load", "normalize", "chunk", "embed", "index"}
+IMPLEMENTED_STAGES = {"load", "normalize", "chunk", "embed", "index", "suggest"}
 
 
 def _print(payload: dict) -> None:
@@ -28,7 +28,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--stage",
         default="load",
-        choices=["load", "normalize", "chunk", "embed", "index", "all"],
+        choices=["load", "normalize", "chunk", "embed", "index", "suggest", "all"],
         help="Pipeline stage to run",
     )
     parser.add_argument("--config", default="config.yaml", help="Path to config.yaml")
@@ -143,6 +143,19 @@ def main(argv: list[str] | None = None) -> int:
                 result = run_index(config, force=args.rebuild)
             except Exception as exc:
                 print(f"INDEX ERROR: {exc}", file=sys.stderr)
+                return 1
+            _print(result)
+
+    if args.stage in {"suggest", "all"}:
+        if args.dry_run:
+            _print({"dry_run": True, "note": "Suggestions are skipped in dry-run mode."})
+        else:
+            try:
+                from src.rag.suggestions import write_suggestions
+
+                result = write_suggestions(config)
+            except Exception as exc:
+                print(f"SUGGEST ERROR: {exc}", file=sys.stderr)
                 return 1
             _print(result)
 

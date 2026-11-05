@@ -5,17 +5,12 @@ from __future__ import annotations
 from typing import Any
 
 from src.safety.intent import SCHEME_LABELS, SUPPORTED_SCHEMES
+from src.suggestions import SAFE_QUESTIONS
 
 STATEMENT_URL = "https://www.hdfcfund.com/services/additional-info/request-statement"
 SCHEME_DOCUMENTS_URL = "https://www.hdfcfund.com/mutual-funds/fund-documents/kim"
 FACTSHEET_URL = "https://www.hdfcfund.com/mutual-funds/factsheets"
 ADVICE_EDUCATION_URL = "https://investor.sebi.gov.in/"
-
-SAFE_QUESTIONS = [
-    "What is the exit load of HDFC Flexi Cap Fund?",
-    "What is the lock-in period of HDFC ELSS Tax Saver?",
-    "How do I download my capital-gains statement?",
-]
 
 
 def envelope(

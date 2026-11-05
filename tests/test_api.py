@@ -285,7 +285,9 @@ def test_chat_multi_scheme_adds_followups(client, monkeypatch):
     )
 
     assert response.status_code == 200
-    assert response.json()["can_do"] == ["What about HDFC Mid Cap Fund?"]
+    assert response.json()["can_do"] == [
+        "What is the exit load of HDFC Mid Cap Fund?"
+    ]
 
 
 def test_chat_provider_unavailable_returns_503(client, monkeypatch):

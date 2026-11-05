@@ -1,6 +1,6 @@
 {
   "suite": "safety",
-  "generated_at": "2026-11-03T06:38:58+00:00",
+  "generated_at": "2026-11-05T03:57:38+00:00",
   "summary": {
     "total": 16,
     "routing_correct": 16,

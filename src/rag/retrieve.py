@@ -11,6 +11,7 @@ from pathlib import Path
 
 from src.config import Config
 from src.ingest.embed import load_model
+from src.rag.topics import detect_topic
 from src.store.chroma import get_collection
 
 PREFERRED_DOC_TYPES = {"kim", "sid", "factsheet", "scheme_page"}
@@ -25,6 +26,7 @@ class RetrievedChunk:
     score: float
     text: str
     metadata: dict = field(default_factory=dict)
+    raw_score: float | None = None
 
     @property
     def url(self) -> str:
@@ -35,12 +37,15 @@ class RetrievedChunk:
         return self.metadata.get("section", "")
 
     def to_dict(self) -> dict:
-        return {
+        payload = {
             "chunk_id": self.chunk_id,
             "score": round(self.score, 6),
             "text": self.text,
             "metadata": self.metadata,
         }
+        if self.raw_score is not None:
+            payload["raw_score"] = round(self.raw_score, 6)
+        return payload
 
 
 @dataclass
@@ -131,7 +136,7 @@ def retrieve(
     )[0]
     query = collection.query(
         query_embeddings=[query_vector.tolist()],
-        n_results=config.retrieval.top_k,
+        n_results=max(config.retrieval.top_k, config.retrieval.candidate_pool),
         where={"scheme": scheme} if scheme else None,
         include=["documents", "metadatas", "distances"],
     )
@@ -155,8 +160,15 @@ def retrieve(
                 score=score,
                 text=document or "",
                 metadata=dict(metadata or {}),
+                raw_score=score,
             )
         )
+
+    detected_topic = detect_topic(question)
+    if detected_topic and config.retrieval.topic_boost > 0:
+        for chunk in candidates:
+            if chunk.metadata.get("topic") == detected_topic:
+                chunk.score += config.retrieval.topic_boost
 
     candidates.sort(key=lambda chunk: chunk.score, reverse=True)
     before_dedupe = len(candidates)
@@ -168,18 +180,32 @@ def retrieve(
         "request_id": _request_id(question, scheme),
         "model": config.embedding.model,
         "top_k": config.retrieval.top_k,
+        "candidate_pool": max(
+            config.retrieval.top_k, config.retrieval.candidate_pool
+        ),
         "score_threshold": config.retrieval.score_threshold,
         "scheme": scheme,
+        "detected_topic": detected_topic,
+        "topic_boost": config.retrieval.topic_boost,
         "candidates": [
             {
                 "chunk_id": chunk.chunk_id,
                 "score": round(chunk.score, 6),
+                "raw_score": round(
+                    chunk.raw_score if chunk.raw_score is not None else chunk.score,
+                    6,
+                ),
                 "source_id": chunk.metadata.get("source_id"),
                 "url": chunk.url,
                 "publisher": chunk.metadata.get("publisher"),
                 "doc_type": chunk.metadata.get("doc_type"),
                 "scheme": chunk.metadata.get("scheme"),
                 "topic": chunk.metadata.get("topic"),
+                "topic_match": (
+                    chunk.metadata.get("topic") == detected_topic
+                    if detected_topic
+                    else None
+                ),
                 "section": chunk.section,
             }
             for chunk in preferred
@@ -188,6 +214,7 @@ def retrieve(
             {
                 "chunk_id": chunk.chunk_id,
                 "score": round(chunk.score, 6),
+                "source_id": chunk.metadata.get("source_id"),
                 "url": chunk.url,
                 "section": chunk.section,
             }

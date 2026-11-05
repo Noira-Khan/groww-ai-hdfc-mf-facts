@@ -147,6 +147,28 @@ def test_no_chunks_returns_not_in_sources(config, monkeypatch):
     assert envelope["chunks_used"] == []
 
 
+def test_topic_mismatch_returns_not_in_sources(config, monkeypatch):
+    chunk = _chunk()
+    chunk.metadata["topic"] = "definitions"
+    retrieval = RetrievalResult(
+        chunks=[chunk],
+        debug={"request_id": "req123", "detected_topic": "exit_load"},
+    )
+    monkeypatch.setattr(pipeline_module, "retrieve", lambda *a, **k: retrieval)
+
+    def fail(*args, **kwargs):
+        raise AssertionError("generation should not run without topical evidence")
+
+    envelope = answer_question(
+        config,
+        "What is the exit load of HDFC Flexi Cap Fund?",
+        complete_fn=fail,
+    )
+
+    assert envelope["type"] == "not_in_sources"
+    assert envelope["chunks_used"] == []
+
+
 def test_model_says_not_in_sources(config, monkeypatch):
     monkeypatch.setattr(pipeline_module, "retrieve", lambda *a, **k: _retrieval())
 

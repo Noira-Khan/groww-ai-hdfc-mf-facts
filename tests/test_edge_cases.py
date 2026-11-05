@@ -149,7 +149,9 @@ def test_multi_scheme_answers_first_and_suggests_other(client, monkeypatch):
 
     payload = response.json()
     assert payload["type"] == "answer"
-    assert payload["can_do"] == ["What about HDFC Mid Cap Fund?"]
+    assert payload["can_do"] == [
+        "What is the exit load of HDFC Mid Cap Fund?"
+    ]
 
 
 def test_empty_input_does_not_reach_pipeline(client, monkeypatch):

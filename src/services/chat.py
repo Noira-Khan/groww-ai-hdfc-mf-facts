@@ -13,8 +13,9 @@ from typing import Any, Callable
 
 from src.config import Config
 from src.rag.pipeline import answer_question
+from src.rag.topics import detect_topic, scheme_topic_question
 from src.safety import responses
-from src.safety.intent import SCHEME_LABELS, classify_question
+from src.safety.intent import classify_question
 from src.safety.pii import detect_pii
 
 AnswerFn = Callable[..., dict[str, Any]]
@@ -79,10 +80,16 @@ def process_question(
                     model=model,
                 )
                 if envelope.get("type") == "answer" and intent.extra_schemes:
-                    envelope["can_do"] = [
-                        f"What about {SCHEME_LABELS[item]}?"
-                        for item in intent.extra_schemes
-                    ]
+                    topic = detect_topic(question)
+                    if topic:
+                        envelope["can_do"] = [
+                            follow_up
+                            for follow_up in (
+                                scheme_topic_question(topic, item)
+                                for item in intent.extra_schemes
+                            )
+                            if follow_up
+                        ]
             except ValueError as exc:
                 raise ChatUnavailableError(str(exc)) from exc
             except Exception:

@@ -33,8 +33,11 @@ vector_store:
 
 retrieval:
   top_k: 5
+  candidate_pool: 20
   score_threshold: 0.35
   max_context_chunks: 3
+  topic_boost: 0.12
+  suggestion_score_threshold: 0.55
 
 llm:
   provider: "groq"               # groq | gemini | openai | anthropic | mistral
