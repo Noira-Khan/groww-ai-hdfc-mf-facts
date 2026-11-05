@@ -2,18 +2,23 @@
 
 A facts-only assistant for a small, curated set of HDFC Mutual Fund schemes, branded for Groww. It answers from **five curated Groww.in pages** (four Direct Growth schemes + the HDFC AMC page), cites exactly one allowlisted Groww link, shows the source date, and refuses investment advice, performance comparisons, personal data, and out-of-corpus questions.
 
-> Facts-only. No investment advice.
+> Facts-only. Public Groww sources only. No advice, performance claims, or PII.
 
 LLM provider and model stay in `.env` / Streamlit secrets (`GROQ_API_KEY`, `LLM_MODEL_ID`). Do not commit secrets.
+
+## Product constraints (enforced)
+
+- **Public sources only.** Corpus is five curated Groww.in pages. No blogs, no app back-end screenshots. Performance refusals link to the official HDFC factsheet catalogue (link only, not ingested).
+- **No PII.** PAN, Aadhaar, phone, email, OTP, and folio/account numbers are blocked before any model call; they are not logged or cached.
+- **No performance claims.** Returns/CAGR/ranking questions are refused and pointed to the official factsheet.
+- **Clarity.** Answers are capped at three sentences and always show `Last updated from sources: …`.
 
 ## What it does
 
 - Answers factual questions about HDFC Large Cap Fund, HDFC Flexi Cap Fund, HDFC ELSS Tax Saver, and HDFC Mid Cap Fund.
-- Covers facts such as exit load, lock-in, minimum SIP, expense ratio, riskometer, benchmark, and account-statement requests.
-- Cites Groww Direct Growth scheme pages so links open on groww.in for quick spotting.
-- Returns answers with a single allowlisted source URL, the source `as_on_date`, a verbatim proof passage, and expandable pipeline/passages transparency in Streamlit.
+- Covers facts such as exit load, lock-in, minimum SIP, expense ratio, riskometer, and benchmark from Groww scheme pages.
+- Cites one allowlisted Groww URL with last-updated date and a verbatim proof passage.
 - Routes advice, performance, PII, injection, ambiguous, and out-of-corpus questions to fixed safe responses.
-- Keeps answers to at most three sentences and validates every number against retrieved context.
 - Serves a one-page Streamlit UI and a JSON API.
 
 ## What it does not do

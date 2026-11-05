@@ -8,9 +8,11 @@ from src.safety.intent import SCHEME_LABELS, SUPPORTED_SCHEMES
 from src.suggestions import SAFE_QUESTIONS
 
 GROWW_AMC_URL = "https://groww.in/mutual-funds/amc/hdfc-mutual-funds"
+# Official public factsheet catalogue — linked on performance refusals only (not in the RAG corpus).
+OFFICIAL_FACTSHEET_URL = "https://www.hdfcfund.com/mutual-funds/factsheets"
 STATEMENT_URL = GROWW_AMC_URL
 SCHEME_DOCUMENTS_URL = GROWW_AMC_URL
-FACTSHEET_URL = GROWW_AMC_URL
+FACTSHEET_URL = OFFICIAL_FACTSHEET_URL
 ADVICE_EDUCATION_URL = GROWW_AMC_URL
 
 
@@ -65,9 +67,10 @@ def advice_response(request_id: str) -> dict[str, Any]:
 def performance_response(request_id: str) -> dict[str, Any]:
     return envelope(
         "refusal_performance",
-        "I do not compute, compare, or comment on returns or performance.",
+        "I do not compute, compare, or comment on returns or performance. "
+        "Please use the official factsheet linked below for published figures.",
         source_url=FACTSHEET_URL,
-        source_name="Groww",
+        source_name="HDFC AMC",
         can_do=list(SAFE_QUESTIONS),
         request_id=request_id,
     )

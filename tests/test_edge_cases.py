@@ -78,7 +78,8 @@ def test_performance_refusal_has_factsheet_link_and_no_numbers(client):
 
     payload = response.json()
     assert payload["type"] == "refusal_performance"
-    assert payload["source_url"] == "https://groww.in/mutual-funds/amc/hdfc-mutual-funds"
+    assert payload["source_url"] == "https://www.hdfcfund.com/mutual-funds/factsheets"
+    assert "factsheet" in payload["answer"].lower()
     assert not any(character.isdigit() for character in payload["answer"])
     assert payload["can_do"]
 

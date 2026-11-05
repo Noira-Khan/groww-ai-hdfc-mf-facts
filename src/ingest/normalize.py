@@ -440,6 +440,14 @@ def normalize_html(
     _strip_boilerplate(full_soup)
     full_text = _clean_block(full_soup.get_text(" ", strip=True))
     as_on_date = extract_date(full_text[:20000])
+    # Groww marketing copy often embeds unrelated calendar dates; prefer fetch day.
+    if spec.doc_type == "groww_page" and fetched_at:
+        try:
+            as_on_date = datetime.fromisoformat(
+                fetched_at.replace("Z", "+00:00")
+            ).date().isoformat()
+        except ValueError:
+            pass
 
     records: list[TextRecord] = []
     if spec.doc_type == "groww_page":

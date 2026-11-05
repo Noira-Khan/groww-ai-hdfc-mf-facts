@@ -257,7 +257,8 @@ def test_run_normalize_writes_jsonl_and_coverage(config, spec):
         (config.app.artifact_dir / "normalized" / "_coverage.json").read_text(encoding="utf-8")
     )
     assert coverage["summary"]["ok"] == 1
-    assert coverage["sources"][0]["as_on_date"] == "2025-11-21"
+    # Groww pages use fetch day for Last updated (marketing HTML dates are unreliable).
+    assert coverage["sources"][0]["as_on_date"] == "2026-11-01"
 
 
 def test_run_normalize_requires_manifest(config):

@@ -1,6 +1,6 @@
 app:
   name: "Groww Fund Facts"
-  disclaimer: "Facts-only. No investment advice."
+  disclaimer: "Facts-only. Public Groww sources only. No advice, performance claims, or PII."
   max_answer_sentences: 3
   artifact_dir: "data/artifacts"
 

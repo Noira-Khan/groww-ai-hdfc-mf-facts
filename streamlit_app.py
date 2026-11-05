@@ -69,9 +69,10 @@ TYPE_TAGS = {
     "error": "No unverified answer is shown.",
 }
 DISCLAIMER = (
-    "Facts-only. No investment advice. Answers cite one curated Groww scheme "
-    "page. Mutual fund investments are subject to market risks; read all "
-    "scheme-related documents carefully."
+    "Facts-only. Public Groww sources only. No investment advice, no performance "
+    "claims, and no personal data. Answers are at most three sentences and show "
+    "Last updated from sources. Mutual fund investments are subject to market "
+    "risks; read all scheme-related documents carefully."
 )
 GITHUB_URL = "https://github.com/Noira-Khan/groww-ai-hdfc-mf-facts"
 GROWW_BLUE = "#5367FF"
@@ -231,6 +232,7 @@ def _render_answer_body(envelope: dict[str, Any]) -> None:
     if isinstance(source_url, str) and source_url.strip():
         _source_link(source_url.strip(), envelope.get("source_name"))
     source_date = envelope.get("as_on_date") or envelope.get("retrieved_at")
+    # Constraint: always surface source freshness with this exact label.
     st.caption(f"Last updated from sources: {source_date or 'Not provided'}")
     proof = envelope.get("proof")
     if isinstance(proof, str) and proof.strip():
