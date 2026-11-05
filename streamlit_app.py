@@ -249,12 +249,23 @@ def _queue_followup(question: str) -> None:
 def _render_followups(questions: Any, key_prefix: str) -> None:
     if not isinstance(questions, list) or not questions:
         return
-    safe_questions = [
-        item for item in questions[:6] if isinstance(item, str) and item.strip()
-    ]
+    # Do not repeat chips already shown in the "Try asking" strip above.
+    already_shown = {item.strip() for item in get_suggested_questions() if item.strip()}
+    safe_questions: list[str] = []
+    seen: set[str] = set()
+    for item in questions:
+        if not isinstance(item, str):
+            continue
+        text = item.strip()
+        if not text or text in seen or text in already_shown:
+            continue
+        seen.add(text)
+        safe_questions.append(text)
+        if len(safe_questions) >= 6:
+            break
     if not safe_questions:
         return
-    st.caption("Explore official facts")
+    st.caption("Related questions")
     for index, question in enumerate(safe_questions):
         if st.button(question, key=f"{key_prefix}_followup_{index}"):
             _queue_followup(question)
@@ -573,9 +584,7 @@ def _inject_ui_styles() -> None:
             overflow-wrap: anywhere;
             word-break: break-word;
             text-align: left;
-            display: flex;
-            align-items: flex-start;
-            justify-content: flex-start;
+            display: block;
             padding: 14px 16px;
             border: 1px solid #e2e6f5;
             border-radius: 13px;
@@ -748,7 +757,17 @@ def render_examples() -> None:
     st.caption(
         "Six factual prompts from Groww scheme pages only."
     )
-    questions = list(get_suggested_questions())[:6]
+    # Preserve order while dropping accidental duplicates.
+    questions: list[str] = []
+    seen: set[str] = set()
+    for item in get_suggested_questions():
+        text = str(item).strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        questions.append(text)
+        if len(questions) >= 6:
+            break
     for row_index in range(0, len(questions), 2):
         row = questions[row_index : row_index + 2]
         columns = st.columns(2, gap="medium")
@@ -758,7 +777,6 @@ def render_examples() -> None:
                     question,
                     key=f"example_{row_index}_{column_index}",
                     width="stretch",
-                    help=question,
                 ):
                     _queue_followup(question)
 

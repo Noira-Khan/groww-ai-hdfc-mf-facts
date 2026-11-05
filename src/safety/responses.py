@@ -5,7 +5,22 @@ from __future__ import annotations
 from typing import Any
 
 from src.safety.intent import SCHEME_LABELS, SUPPORTED_SCHEMES
-from src.suggestions import SAFE_QUESTIONS
+from src.suggestions import CURATED_SUGGESTIONS, SAFE_QUESTIONS
+
+
+def _followup_questions(limit: int = 3) -> list[str]:
+    """Return a short, unique follow-up list for guardrail envelopes."""
+    items: list[str] = []
+    seen: set[str] = set()
+    for suggestion in CURATED_SUGGESTIONS:
+        text = suggestion.question.strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        items.append(text)
+        if len(items) >= limit:
+            break
+    return items or list(SAFE_QUESTIONS)
 
 GROWW_AMC_URL = "https://groww.in/mutual-funds/amc/hdfc-mutual-funds"
 # Official public factsheet catalogue — linked on performance refusals only (not in the RAG corpus).
@@ -48,7 +63,7 @@ def pii_response(request_id: str) -> dict[str, Any]:
         "email, OTP, or folio numbers.",
         source_url=STATEMENT_URL,
         source_name="Groww",
-        can_do=list(SAFE_QUESTIONS),
+        can_do=_followup_questions(),
         request_id=request_id,
     )
 
@@ -59,7 +74,7 @@ def advice_response(request_id: str) -> dict[str, Any]:
         "I can share factual information, not investment advice or recommendations.",
         source_url=ADVICE_EDUCATION_URL,
         source_name="Groww",
-        can_do=list(SAFE_QUESTIONS),
+        can_do=_followup_questions(),
         request_id=request_id,
     )
 
@@ -71,7 +86,7 @@ def performance_response(request_id: str) -> dict[str, Any]:
         "Please use the official factsheet linked below for published figures.",
         source_url=FACTSHEET_URL,
         source_name="HDFC AMC",
-        can_do=list(SAFE_QUESTIONS),
+        can_do=_followup_questions(),
         request_id=request_id,
     )
 
@@ -82,7 +97,7 @@ def not_in_sources_response(request_id: str) -> dict[str, Any]:
         "That fact is not covered by my curated Groww sources.",
         source_url=SCHEME_DOCUMENTS_URL,
         source_name="Groww",
-        can_do=list(SAFE_QUESTIONS),
+        can_do=_followup_questions(),
         request_id=request_id,
     )
 

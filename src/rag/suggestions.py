@@ -74,9 +74,22 @@ def load_suggestions(config: Config, limit: int = 8) -> list[dict] | None:
 def resolve_suggestions(config: Config, limit: int = 8) -> list[str]:
     """Return verified questions, falling back to the curated defaults."""
     cached = load_suggestions(config, limit=limit)
-    if cached is not None:
-        return [item["question"] for item in cached]
-    return list(DEFAULT_SUGGESTIONS[:limit])
+    raw = (
+        [item["question"] for item in cached]
+        if cached is not None
+        else list(DEFAULT_SUGGESTIONS[:limit])
+    )
+    unique: list[str] = []
+    seen: set[str] = set()
+    for question in raw:
+        text = str(question).strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        unique.append(text)
+        if len(unique) >= limit:
+            break
+    return unique
 
 
 def _verify(
