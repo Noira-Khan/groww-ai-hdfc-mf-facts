@@ -499,7 +499,13 @@ def _inject_ui_styles() -> None:
             f"""
         <style>
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
-        html, body, [data-testid="stAppViewContainer"], [class*="st-"] {{
+        /* Do not target [class*="st-"] — that overrides Streamlit icon fonts and
+           causes ghost/overlapping expander labels (e.g. "oard_v" on Verbatim). */
+        html, body, [data-testid="stAppViewContainer"],
+        [data-testid="stMarkdownContainer"],
+        [data-testid="stCaptionContainer"],
+        [data-testid="stWidgetLabel"],
+        [data-testid="stChatMessage"] {{
             font-family: "DM Sans", "Segoe UI", sans-serif;
         }}
         [data-testid="stAppViewContainer"] {{
@@ -507,6 +513,21 @@ def _inject_ui_styles() -> None:
                 radial-gradient(1200px 500px at 10% -10%, #eef1ff 0%, transparent 55%),
                 radial-gradient(900px 420px at 100% 0%, #f5f7ff 0%, transparent 50%),
                 #ffffff;
+        }}
+        /* Keep expander headers single-line and free of button-flex side effects. */
+        [data-testid="stExpander"] details summary {{
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.35rem;
+            overflow: hidden;
+        }}
+        [data-testid="stExpander"] details summary span {{
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }}
+        [data-testid="stExpander"] details summary svg {{
+            flex-shrink: 0;
         }}
         [data-testid="stHeader"] {{
             background: rgba(255, 255, 255, 0.92);
