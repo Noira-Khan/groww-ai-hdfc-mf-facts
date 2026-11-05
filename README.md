@@ -28,6 +28,72 @@ LLM provider and model stay in `.env` / Streamlit secrets (`GROQ_API_KEY`, `LLM_
 - It does not answer for schemes outside the curated corpus.
 - It does not accept or store PAN, Aadhaar, phone, email, OTP, folio, or account numbers.
 
+## Source list (15 Groww URLs)
+
+Public Groww.in pages only (HDFC AMC family). Full inventory: [`sources.csv`](sources.csv), [`SOURCES.md`](SOURCES.md).
+
+| # | Page | URL |
+|---|---|---|
+| 1 | HDFC Large Cap Fund Direct Growth | https://groww.in/mutual-funds/hdfc-large-cap-fund-direct-growth |
+| 2 | HDFC Flexi Cap Fund Direct Growth | https://groww.in/mutual-funds/hdfc-equity-fund-direct-growth |
+| 3 | HDFC Mid Cap Fund Direct Growth | https://groww.in/mutual-funds/hdfc-mid-cap-fund-direct-growth |
+| 4 | HDFC ELSS Tax Saver Fund Direct Growth | https://groww.in/mutual-funds/hdfc-elss-tax-saver-fund-direct-plan-growth |
+| 5 | HDFC Mutual Funds AMC | https://groww.in/mutual-funds/amc/hdfc-mutual-funds |
+| 6 | HDFC Small Cap Fund Direct Growth | https://groww.in/mutual-funds/hdfc-small-cap-fund-direct-growth |
+| 7 | HDFC Balanced Advantage Fund Direct Growth | https://groww.in/mutual-funds/hdfc-balanced-advantage-fund-direct-growth |
+| 8 | HDFC Large and Mid Cap Fund Direct Growth | https://groww.in/mutual-funds/hdfc-large-mid-cap-fund-direct-growth |
+| 9 | HDFC Multi Cap Fund Direct Growth | https://groww.in/mutual-funds/hdfc-multi-cap-fund-direct-growth |
+| 10 | HDFC Focused Fund Direct Growth | https://groww.in/mutual-funds/hdfc-focused-fund-direct-growth |
+| 11 | HDFC Liquid Fund Direct Growth | https://groww.in/mutual-funds/hdfc-liquid-fund-direct-growth |
+| 12 | HDFC Banking and PSU Debt Fund Direct Growth | https://groww.in/mutual-funds/hdfc-banking-and-psu-debt-fund-direct-growth |
+| 13 | HDFC Overnight Fund Direct Growth | https://groww.in/mutual-funds/hdfc-overnight-fund-direct-growth |
+| 14 | HDFC Arbitrage Fund Direct Growth | https://groww.in/mutual-funds/hdfc-arbitrage-fund-direct-growth |
+| 15 | HDFC Retirement Fund Equity Plan Direct Growth | https://groww.in/mutual-funds/hdfc-retirement-fund-equity-plan-direct-growth |
+
+Primary chat schemes: Large Cap, Flexi Cap, Mid Cap, ELSS. Other rows broaden AMC context on Groww.
+
+## Sample Q&A
+
+More examples: [`sample_qa.md`](sample_qa.md). Numbers can change when Groww pages update—rebuild the knowledge base after changing sources.
+
+### Factual
+
+**Q:** What is the exit load of HDFC Flexi Cap Fund?  
+**A:** Exit load of 1% if redeemed within 1 year (wording from the Groww scheme page).  
+**Source:** https://groww.in/mutual-funds/hdfc-equity-fund-direct-growth  
+**Last updated from sources:** shown in the UI from the ingested page date.
+
+**Q:** What is the lock-in period of HDFC ELSS Tax Saver?  
+**A:** The lock-in period is 3 years.  
+**Source:** https://groww.in/mutual-funds/hdfc-elss-tax-saver-fund-direct-plan-growth
+
+**Q:** What is the minimum SIP for HDFC Large Cap Fund?  
+**A:** Minimum SIP is ₹ 100.  
+**Source:** https://groww.in/mutual-funds/hdfc-large-cap-fund-direct-growth
+
+**Q:** What is the Total Expense Ratio of HDFC Mid Cap Fund?  
+**A:** TER is taken from the Groww fund facts panel (for example 0.74% Direct Growth when last checked).  
+**Source:** https://groww.in/mutual-funds/hdfc-mid-cap-fund-direct-growth
+
+**Q:** What is the benchmark of HDFC Mid Cap Fund?  
+**A:** NIFTY Midcap 150 TRI.  
+**Source:** https://groww.in/mutual-funds/hdfc-mid-cap-fund-direct-growth
+
+**Q:** What is the riskometer of HDFC Large Cap Fund?  
+**A:** Very High.  
+**Source:** https://groww.in/mutual-funds/hdfc-large-cap-fund-direct-growth
+
+### Guardrails
+
+**Q:** Should I buy HDFC Mid Cap Fund?  
+**Type:** `refusal_advice` — factual information only; no recommendations.
+
+**Q:** Which fund gave the best 3-year return?  
+**Type:** `refusal_performance` — no returns/comparisons; links to the official factsheet catalogue.
+
+**Q:** My PAN is ABCDE1234F, check my folio.  
+**Type:** `pii` — personal data is not accepted, logged, or stored.
+
 ## Architecture
 
 ```
@@ -40,7 +106,9 @@ src/rag/            Retrieval, prompt generation, validation, cache, pipeline
 src/ingest/         Source loading, normalization, chunking, embeddings, Chroma index
 eval/               Gold questions and retrieval/QA/safety runner
 tests/              Unit and API tests
-sources.csv         Curated source inventory (Groww + HDFC AMC + SEBI + AMFI)
+sources.csv         Curated Groww HDFC source inventory (15 URLs)
+SOURCES.md          Human-readable source list
+sample_qa.md        Extended sample Q&A
 data/artifacts/     Generated corpus, Chroma index, and cache (gitignored)
 data/eval/          Generated evaluation results
 ```
@@ -228,4 +296,6 @@ Key settings in `config.yaml`:
 
 ## Disclaimer
 
-This is a prototype for factual information only. It is not investment, tax, or legal advice. Always verify details in the latest scheme documents before acting.
+Facts-only. Public Groww sources only. No investment advice, no performance claims, and no personal data. Answers are at most three sentences and show **Last updated from sources**. Mutual fund investments are subject to market risks; read all scheme-related documents carefully.
+
+This prototype is not investment, tax, or legal advice. Always verify details on the cited Groww page and the latest official scheme documents before acting. Performance questions are refused and pointed to the official HDFC factsheet catalogue (https://www.hdfcfund.com/mutual-funds/factsheets), which is linked only—not ingested into the corpus.
