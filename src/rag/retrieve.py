@@ -22,6 +22,45 @@ TOPIC_PREFERRED_DOC_TYPES: dict[str, set[str]] = {
     "statements": {"statement_guide", "faq"},
     "capital_gains": {"statement_guide", "faq"},
     "definitions": {"faq", "education", "scheme_page"},
+    "riskometer": {"scheme_page", "kim", "factsheet"},
+    "benchmark": {"scheme_page", "kim", "factsheet"},
+    "expense_ratio": {"scheme_page", "kim", "factsheet"},
+    "exit_load": {"scheme_page", "kim", "sid"},
+    "min_sip": {"scheme_page", "kim", "factsheet"},
+    "elss_lockin": {"scheme_page", "kim", "sid"},
+}
+TOPIC_VALUE_PATTERNS: dict[str, re.Pattern[str]] = {
+    "riskometer": re.compile(
+        r"(?:risk[\s-]*o?[\s-]*meter|riskometer)\s*[:\-]?\s*"
+        r"(very\s+high|moderately\s+high|moderate|high|low)"
+        r"|(?:very\s+high|moderately\s+high|moderate|high|low)\s+"
+        r"(?:on\s+the\s+)?(?:risk[\s-]*o?[\s-]*meter|riskometer)",
+        re.IGNORECASE,
+    ),
+    "benchmark": re.compile(
+        r"\b(?:scheme\s+)?benchmark\s*[:\-]?\s*[^\n]{0,100}"
+        r"\b(?:nifty|bse|sensex)[^\n]{0,60}"
+        r"|\bnifty\s+(?:midcap|large\s*cap|500|100|50)\b[^\n]{0,40}\btri\b",
+        re.IGNORECASE,
+    ),
+    "expense_ratio": re.compile(
+        r"(?:(?:total\s+)?expense\s*ratio|\bter\b)[\s\S]{0,60}\d"
+        r"|\d+(?:\.\d+)?\s*%[\s\S]{0,40}(?:expense|ter)",
+        re.IGNORECASE,
+    ),
+    "exit_load": re.compile(
+        r"exit[\s-]*load[\s\S]{0,80}\d",
+        re.IGNORECASE,
+    ),
+    "min_sip": re.compile(
+        r"(?:min(?:imum)?\s+(?:sip|investment|purchase)|sip)[\s\S]{0,40}"
+        r"(?:₹\s*)?\d",
+        re.IGNORECASE,
+    ),
+    "elss_lockin": re.compile(
+        r"lock[\s-]*in[\s\S]{0,40}(?:\d+|three)\s*year",
+        re.IGNORECASE,
+    ),
 }
 SOURCE_PREFERENCE_WINDOW = 0.05
 NEAR_DUPLICATE_RATIO = 0.95
@@ -29,6 +68,9 @@ LEXICAL_BOOST_MAX = 0.05
 LOWER_PRIORITY_PENALTY = 0.03
 CROSS_SCHEME_PENALTY = 0.10
 TOPIC_DOC_BOOST = 0.06
+FACT_VALUE_BOOST = 0.18
+WEAK_TOPIC_PENALTY = 0.08
+VALUE_CONTEXT_CAP = 3
 STOPWORDS = frozenset(
     {
         "a",
@@ -211,12 +253,23 @@ def _matches_topic(chunk: RetrievedChunk, topic: str | None) -> bool:
     return False
 
 
+def _has_topic_value(chunk: RetrievedChunk, topic: str | None) -> bool:
+    """True when the chunk body contains an actionable value for the topic."""
+    if not topic:
+        return False
+    pattern = TOPIC_VALUE_PATTERNS.get(topic)
+    if pattern is None:
+        return True
+    # Use body text only so section headings do not count as fact values.
+    return bool(pattern.search(chunk.text or ""))
+
+
 def _select_context(
     chunks: list[RetrievedChunk],
     limit: int,
     detected_topic: str | None = None,
 ) -> list[RetrievedChunk]:
-    """Pick top context with source diversity, preferring topic-matched evidence."""
+    """Pick top context with source diversity, preferring value-bearing evidence."""
     if limit <= 0 or not chunks:
         return []
 
@@ -240,15 +293,39 @@ def _select_context(
             seen_sources.add(key)
 
     topic_hits = [chunk for chunk in chunks if _matches_topic(chunk, detected_topic)]
+    valued_hits = [
+        chunk for chunk in topic_hits if _has_topic_value(chunk, detected_topic)
+    ]
+    preferred_valued = [
+        chunk
+        for chunk in valued_hits
+        if chunk.metadata.get("doc_type") in preferred_types
+    ]
+    other_valued = [chunk for chunk in valued_hits if chunk not in preferred_valued]
     preferred_hits = [
         chunk
         for chunk in topic_hits
         if chunk.metadata.get("doc_type") in preferred_types
+        and chunk not in valued_hits
     ]
-    other_hits = [chunk for chunk in topic_hits if chunk not in preferred_hits]
+    other_hits = [
+        chunk
+        for chunk in topic_hits
+        if chunk not in valued_hits and chunk not in preferred_hits
+    ]
     non_hits = [chunk for chunk in chunks if chunk not in topic_hits]
 
-    # Exhaust preferred topic docs before weaker topic/non-topic fillers.
+    # When clear fact values exist, keep context on those chunks only.
+    if valued_hits:
+        limit = min(limit, VALUE_CONTEXT_CAP)
+
+    _take(preferred_valued, unique_source=True)
+    _take(preferred_valued, unique_source=False)
+    _take(other_valued, unique_source=True)
+    _take(other_valued, unique_source=False)
+    if valued_hits and selected:
+        return selected
+
     _take(preferred_hits, unique_source=True)
     _take(preferred_hits, unique_source=False)
     _take(other_hits, unique_source=True)
@@ -325,6 +402,10 @@ def retrieve(
         if detected_topic and config.retrieval.topic_boost > 0:
             if _matches_topic(chunk, detected_topic):
                 chunk.score += config.retrieval.topic_boost
+                if _has_topic_value(chunk, detected_topic):
+                    chunk.score += FACT_VALUE_BOOST
+                else:
+                    chunk.score -= WEAK_TOPIC_PENALTY
 
     candidates.sort(key=lambda chunk: chunk.score, reverse=True)
     before_dedupe = len(candidates)

@@ -147,7 +147,7 @@ def get_knowledge_base() -> bool:
 
 @st.cache_data(show_spinner=False)
 def get_suggested_questions() -> tuple[str, ...]:
-    """Load gold factual questions verified against the current corpus."""
+    """Load factual questions verified against the current corpus."""
     runtime = get_runtime()
     if runtime.config is None:
         return DEFAULT_SUGGESTIONS
@@ -650,10 +650,10 @@ def render_hero() -> None:
 
 
 def render_examples() -> None:
-    """Render gold factual questions in a fully readable two-column grid."""
-    st.markdown("### Try these gold questions")
+    """Render factual example questions in a fully readable two-column grid."""
+    st.markdown("### Try asking")
     st.caption(
-        "Factual prompts from the evaluation set with verified retrieval coverage."
+        "Factual prompts with verified retrieval coverage."
     )
     questions = list(get_suggested_questions())[:8]
     for row_index in range(0, len(questions), 2):

@@ -172,7 +172,7 @@ def test_retrieve_boosts_matching_topic_over_generic_definition(
             _row(
                 "exit",
                 0.30,
-                "Exit load details.",
+                "Exit load is 1% within one year.",
                 topic="exit_load",
                 section="Exit load",
             ),
@@ -184,9 +184,9 @@ def test_retrieve_boosts_matching_topic_over_generic_definition(
     )
 
     assert result.debug["detected_topic"] == "exit_load"
-    assert [chunk.chunk_id for chunk in result.chunks] == ["exit", "defs"]
+    assert [chunk.chunk_id for chunk in result.chunks] == ["exit"]
     assert result.chunks[0].raw_score == pytest.approx(0.70)
-    assert result.chunks[0].score > result.chunks[1].score
+    assert result.debug["candidates"][0]["chunk_id"] == "exit"
     assert result.debug["candidates"][0]["topic_match"] is True
 
 
@@ -236,6 +236,56 @@ def test_retrieve_diversifies_selected_sources(config, monkeypatch):
         chunk.metadata.get("source_id") for chunk in result.chunks
     ]
     assert selected_sources == ["page", "kim", "sid"]
+
+
+def test_retrieve_prefers_value_bearing_riskometer_chunk(config, monkeypatch):
+    config.retrieval.max_context_chunks = 5
+    _install(
+        monkeypatch,
+        [
+            _row(
+                "mention",
+                0.10,
+                "See the scheme Riskometer and Benchmark Riskometer notes.",
+                source_id="hdfc_large_cap_kim",
+                doc_type="kim",
+                scheme="large_cap",
+                topic="riskometer",
+                section="Riskometer",
+            ),
+            _row(
+                "value",
+                0.22,
+                "Riskometer: Very High",
+                source_id="hdfc_large_cap_page",
+                doc_type="scheme_page",
+                scheme="large_cap",
+                topic="riskometer",
+                section="Riskometer",
+            ),
+            _row(
+                "noise",
+                0.12,
+                "https://www.amfiindia.com/online-center/risk-o-meter",
+                source_id="hdfc_large_cap_kim",
+                doc_type="kim",
+                scheme="large_cap",
+                topic="general",
+                section="Links",
+            ),
+        ],
+    )
+
+    result = retrieve(
+        config,
+        "What is the riskometer of HDFC Large Cap Fund?",
+        scheme="large_cap",
+        model=FakeModel(),
+    )
+
+    assert result.chunks[0].chunk_id == "value"
+    assert all("Very High" in chunk.text or "Riskometer" in chunk.text for chunk in result.chunks)
+    assert len(result.chunks) <= 3
 
 
 def test_retrieve_prefers_amc_wide_statement_guide(config, monkeypatch):

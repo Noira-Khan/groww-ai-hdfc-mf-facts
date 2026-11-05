@@ -1,6 +1,6 @@
 """Curated questions that are verified against the indexed corpus.
 
-The first eight entries are the factual gold-set questions (F01–F08).
+The first eight entries are the factual evaluation questions (F01–F08).
 They have strong retrieval coverage and are the prompts shown in Streamlit.
 """
 
@@ -17,7 +17,7 @@ class Suggestion:
     min_score: float = 0.55
 
 
-# Gold factual questions (eval/gold_questions.csv F01–F08), retrieval-verified.
+# Factual evaluation questions (eval/gold_questions.csv F01–F08), retrieval-verified.
 CURATED_SUGGESTIONS: tuple[Suggestion, ...] = (
     Suggestion(
         "What is the exit load of HDFC Flexi Cap Fund?",

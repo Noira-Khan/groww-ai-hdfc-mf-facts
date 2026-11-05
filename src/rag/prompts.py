@@ -85,15 +85,17 @@ CORE RULES
 
 6. INSUFFICIENT INFORMATION
 
-Return {"not_in_sources": true} when:
+If at least one CONTEXT chunk clearly states the requested fact for the
+correct scheme, answer from that chunk. Ignore tangential chunks that only
+mention related keywords without stating the fact.
 
-- The requested fact is absent from CONTEXT.
+Return {"not_in_sources": true} only when:
+
+- No CONTEXT chunk states the requested fact.
 - The retrieved information is unrelated to the question.
-- The requested scheme cannot be established.
-- The available numbers are ambiguous or contradictory.
-- The source does not support the requested conclusion.
-- A required citation or verbatim proof cannot be supplied.
-- Only partial evidence is available for a multi-part question.
+- The requested scheme cannot be established from CONTEXT.
+- Contradictory values for the same fact appear and cannot be resolved.
+- A required citation or verbatim proof cannot be supplied from CONTEXT.
 
 Do not guess or fill missing information.
 
