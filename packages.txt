@@ -1,4 +1,2 @@
-# Apt packages for Streamlit Community Cloud (Debian).
-# Needed by lxml / readability-lxml during knowledge-base ingestion.
 libxml2-dev
 libxslt1-dev
