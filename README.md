@@ -1,6 +1,6 @@
 # Groww Fund Facts
 
-A facts-only assistant for a small, curated set of HDFC Mutual Fund schemes, branded for Groww. It answers from **five curated Groww.in pages** (four Direct Growth schemes + the HDFC AMC page), cites exactly one allowlisted Groww link, shows the source date, and refuses investment advice, performance comparisons, personal data, and out-of-corpus questions.
+A facts-only assistant for a small, curated set of HDFC Mutual Fund schemes, branded for Groww. It answers from **15 curated Groww.in pages** (HDFC AMC family only — see [`SOURCES.md`](SOURCES.md) / [`sources.csv`](sources.csv)), cites exactly one allowlisted Groww link, shows the source date, and refuses investment advice, performance comparisons, personal data, and out-of-corpus questions.
 
 > Facts-only. Public Groww sources only. No advice, performance claims, or PII.
 
@@ -8,7 +8,7 @@ LLM provider and model stay in `.env` / Streamlit secrets (`GROQ_API_KEY`, `LLM_
 
 ## Product constraints (enforced)
 
-- **Public sources only.** Corpus is five curated Groww.in pages. No blogs, no app back-end screenshots. Performance refusals link to the official HDFC factsheet catalogue (link only, not ingested).
+- **Public sources only.** Corpus is 15 curated Groww.in HDFC pages (15–25 URL band). No blogs, no app back-end screenshots. Performance refusals link to the official HDFC factsheet catalogue (link only, not ingested).
 - **No PII.** PAN, Aadhaar, phone, email, OTP, and folio/account numbers are blocked before any model call; they are not logged or cached.
 - **No performance claims.** Returns/CAGR/ranking questions are refused and pointed to the official factsheet.
 - **Clarity.** Answers are capped at three sentences and always show `Last updated from sources: …`.
@@ -212,7 +212,7 @@ Key settings in `config.yaml`:
 - `llm.provider`, `llm.model`, temperature, and timeout control generation (defaults: Groq + `LLM_MODEL_ID` from `.env`).
 - `safety.detect_pii`, `safety.max_repair_retries`, and `safety.cache_answers` control guardrails.
 - `app.max_answer_sentences` is enforced by validation.
-- `ingestion.allowlist_publishers` is Groww-only; `sources.csv` lists exactly five Groww URLs.
+- `ingestion.allowlist_publishers` is Groww-only; `sources.csv` / `SOURCES.md` list exactly 15 Groww HDFC URLs.
 
 `llm.model` is read from `LLM_MODEL_ID` in `.env`.
 

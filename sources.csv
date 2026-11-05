@@ -4,3 +4,13 @@ groww_flexi_cap_page,https://groww.in/mutual-funds/hdfc-equity-fund-direct-growt
 groww_mid_cap_page,https://groww.in/mutual-funds/hdfc-mid-cap-fund-direct-growth,Groww,groww_page,mid_cap,Groww HDFC Mid Cap Fund Direct Growth,expense_ratio|exit_load|min_sip|riskometer|benchmark
 groww_elss_page,https://groww.in/mutual-funds/hdfc-elss-tax-saver-fund-direct-plan-growth,Groww,groww_page,elss,Groww HDFC ELSS Tax Saver Fund Direct Growth,elss_lockin|expense_ratio|exit_load|min_sip|riskometer|benchmark
 groww_hdfc_amc,https://groww.in/mutual-funds/amc/hdfc-mutual-funds,Groww,groww_page,amc_wide,Groww HDFC Mutual Funds AMC page,definitions|scheme_documents
+groww_small_cap_page,https://groww.in/mutual-funds/hdfc-small-cap-fund-direct-growth,Groww,groww_page,small_cap,Groww HDFC Small Cap Fund Direct Growth,definitions|riskometer|benchmark
+groww_balanced_advantage_page,https://groww.in/mutual-funds/hdfc-balanced-advantage-fund-direct-growth,Groww,groww_page,amc_wide,Groww HDFC Balanced Advantage Fund Direct Growth,definitions
+groww_large_mid_cap_page,https://groww.in/mutual-funds/hdfc-large-mid-cap-fund-direct-growth,Groww,groww_page,amc_wide,Groww HDFC Large and Mid Cap Fund Direct Growth,definitions
+groww_multi_cap_page,https://groww.in/mutual-funds/hdfc-multi-cap-fund-direct-growth,Groww,groww_page,amc_wide,Groww HDFC Multi Cap Fund Direct Growth,definitions
+groww_focused_page,https://groww.in/mutual-funds/hdfc-focused-fund-direct-growth,Groww,groww_page,amc_wide,Groww HDFC Focused Fund Direct Growth,definitions
+groww_liquid_page,https://groww.in/mutual-funds/hdfc-liquid-fund-direct-growth,Groww,groww_page,amc_wide,Groww HDFC Liquid Fund Direct Growth,definitions
+groww_banking_psu_page,https://groww.in/mutual-funds/hdfc-banking-and-psu-debt-fund-direct-growth,Groww,groww_page,amc_wide,Groww HDFC Banking and PSU Debt Fund Direct Growth,definitions
+groww_overnight_page,https://groww.in/mutual-funds/hdfc-overnight-fund-direct-growth,Groww,groww_page,amc_wide,Groww HDFC Overnight Fund Direct Growth,definitions
+groww_arbitrage_page,https://groww.in/mutual-funds/hdfc-arbitrage-fund-direct-growth,Groww,groww_page,amc_wide,Groww HDFC Arbitrage Fund Direct Growth,definitions
+groww_retirement_equity_page,https://groww.in/mutual-funds/hdfc-retirement-fund-equity-plan-direct-growth,Groww,groww_page,amc_wide,Groww HDFC Retirement Fund Equity Plan Direct Growth,definitions

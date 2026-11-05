@@ -132,7 +132,8 @@ def test_load_inventory_requires_columns(tmp_path):
 def test_shipped_inventory_is_valid(config):
     specs = load_inventory(CONFIG_PATH.parent / "sources.csv")
     validate_inventory(specs, config.ingestion.allowlist_publishers)
-    assert len(specs) == 5
+    assert 15 <= len(specs) <= 25
+    assert len(specs) == 15
     assert all(spec.publisher == "Groww" for spec in specs)
     assert all(spec.doc_type == "groww_page" for spec in specs)
     assert all("groww.in" in spec.url for spec in specs)
@@ -297,5 +298,5 @@ def test_merge_with_existing_keeps_prior_sources(config, server):
 def test_run_load_dry_run_does_not_download(config):
     result = run_load(config, inventory_path=CONFIG_PATH.parent / "sources.csv", dry_run=True)
     assert result["dry_run"] is True
-    assert len(result["sources"]) == 5
+    assert len(result["sources"]) == 15
     assert read_manifest(config) is None

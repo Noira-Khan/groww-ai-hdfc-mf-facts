@@ -330,7 +330,7 @@ def _render_config_error(runtime: Runtime) -> None:
 def _render_setup(config: Config) -> None:
     st.warning(
         "The knowledge base has not been built in this deployment yet. "
-        "It is created once from five curated Groww scheme/AMC pages."
+        "It is created once from 15 curated Groww HDFC AMC pages."
     )
     st.markdown(
         "**What happens when you initialize:**\n"
@@ -737,7 +737,7 @@ def render_hero() -> None:
             </h1>
             <p style="font-size:16px;color:#6b7289;margin:0 0 18px;">
                 Exit load, TER, SIP minimums, lock-in, riskometer, and benchmarks
-                from five curated Groww scheme pages.
+                from 15 curated Groww HDFC AMC pages.
             </p>
             <div style="display:inline-block;padding:12px 16px;
                 background:#f7f8ff;border:1px solid #e2e6f5;border-radius:12px;
