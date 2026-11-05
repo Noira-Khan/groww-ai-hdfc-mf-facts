@@ -142,7 +142,7 @@ def _build_missing_corpus(
         except Exception as exc:
             raise KnowledgeBaseError(
                 "Source download failed. The assistant needs network access to "
-                f"the official HDFC AMC, SEBI, and AMFI documents. ({exc})"
+                f"the curated Groww scheme pages. ({exc})"
             ) from exc
         try:
             _run_stage(

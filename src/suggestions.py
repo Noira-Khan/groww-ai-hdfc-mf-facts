@@ -1,7 +1,6 @@
 """Curated questions that are verified against the indexed corpus.
 
-The first eight entries are the factual evaluation questions (F01–F08).
-They have strong retrieval coverage and are the prompts shown in Streamlit.
+Six varied factual prompts are shown in Streamlit (one per fact type).
 """
 
 from __future__ import annotations
@@ -17,7 +16,7 @@ class Suggestion:
     min_score: float = 0.55
 
 
-# Factual evaluation questions (eval/gold_questions.csv F01–F08), retrieval-verified.
+# Six varied Groww-answerable prompts (exit load, lock-in, SIP, TER, riskometer, benchmark).
 CURATED_SUGGESTIONS: tuple[Suggestion, ...] = (
     Suggestion(
         "What is the exit load of HDFC Flexi Cap Fund?",
@@ -48,16 +47,6 @@ CURATED_SUGGESTIONS: tuple[Suggestion, ...] = (
         "What is the benchmark of HDFC Mid Cap Fund?",
         "benchmark",
         "mid_cap",
-    ),
-    Suggestion(
-        "What is the exit load of HDFC Mid Cap Fund?",
-        "exit_load",
-        "mid_cap",
-    ),
-    Suggestion(
-        "What is the riskometer of HDFC ELSS Tax Saver?",
-        "riskometer",
-        "elss",
     ),
 )
 

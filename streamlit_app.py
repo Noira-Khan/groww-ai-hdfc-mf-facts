@@ -154,8 +154,8 @@ def get_suggested_questions() -> tuple[str, ...]:
         return DEFAULT_SUGGESTIONS
     from src.rag.suggestions import resolve_suggestions
 
-    verified = tuple(resolve_suggestions(runtime.config, limit=8))
-    return verified or DEFAULT_SUGGESTIONS
+    verified = tuple(resolve_suggestions(runtime.config, limit=6))
+    return verified or DEFAULT_SUGGESTIONS[:6]
 
 
 def _source_link(url: str, name: str | None) -> None:
@@ -725,9 +725,9 @@ def render_examples() -> None:
     """Render factual example questions in a fully readable two-column grid."""
     st.markdown("### Try asking")
     st.caption(
-        "Factual prompts with verified retrieval coverage. Citations prefer Groww scheme pages."
+        "Six factual prompts from Groww scheme pages only."
     )
-    questions = list(get_suggested_questions())[:8]
+    questions = list(get_suggested_questions())[:6]
     for row_index in range(0, len(questions), 2):
         row = questions[row_index : row_index + 2]
         columns = st.columns(2, gap="medium")

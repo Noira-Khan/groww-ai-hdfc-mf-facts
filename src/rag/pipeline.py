@@ -77,8 +77,7 @@ def _pipeline_steps(
             "title": "Searched the curated sources",
             "status": "top_k",
             "detail": (
-                f"Selected {len(retrieval.chunks)} passages from Groww, "
-                "HDFC AMC, SEBI and AMFI."
+                f"Selected {len(retrieval.chunks)} passages from curated Groww pages."
             ),
         },
         {
