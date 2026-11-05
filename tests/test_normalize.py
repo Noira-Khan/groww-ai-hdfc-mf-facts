@@ -46,12 +46,12 @@ HTML = """
 @pytest.fixture
 def spec():
     return SourceSpec(
-        source_id="hdfc_mid_cap_page",
-        url="https://www.hdfcfund.com/explore/mutual-funds/hdfc-mid-cap-fund/regular",
-        publisher="HDFC AMC",
-        doc_type="scheme_page",
+        source_id="groww_mid_cap_page",
+        url="https://groww.in/mutual-funds/hdfc-mid-cap-fund-direct-growth",
+        publisher="Groww",
+        doc_type="groww_page",
         scheme="mid_cap",
-        title="HDFC Mid Cap Fund scheme page",
+        title="Groww HDFC Mid Cap Fund Direct Growth",
         expected_topics=["expense_ratio", "exit_load"],
     )
 
@@ -73,11 +73,22 @@ def test_extract_date_formats():
     assert extract_date("no date here") is None
 
 
-def test_normalize_html_extracts_sections_and_table(spec):
-    records = normalize_html(HTML, spec, "text/html; charset=utf-8", "2026-11-01T00:00:00+00:00")
+def test_normalize_html_extracts_sections_and_table():
+    page_spec = SourceSpec(
+        source_id="sample_scheme_page",
+        url="https://groww.in/mutual-funds/sample",
+        publisher="Groww",
+        doc_type="scheme_page",
+        scheme="mid_cap",
+        title="Sample scheme page",
+        expected_topics=["expense_ratio", "exit_load"],
+    )
+    records = normalize_html(
+        HTML, page_spec, "text/html; charset=utf-8", "2026-11-01T00:00:00+00:00"
+    )
     assert records
-    assert all(record.source_id == spec.source_id for record in records)
-    assert all(record.publisher == "HDFC AMC" for record in records)
+    assert all(record.source_id == page_spec.source_id for record in records)
+    assert all(record.publisher == "Groww" for record in records)
     assert all(record.as_on_date == "2025-11-21" for record in records)
 
     exit_load = [record for record in records if "Exit load of 1.00%" in record.text]
@@ -92,6 +103,42 @@ def test_normalize_html_extracts_sections_and_table(spec):
     assert "Menu Home" not in combined
     assert "Accept all cookies" not in combined
     assert "do not include" not in combined
+
+
+def test_normalize_html_extracts_groww_next_data_facts():
+    groww_spec = SourceSpec(
+        source_id="groww_mid_cap_page",
+        url="https://groww.in/mutual-funds/hdfc-mid-cap-fund-direct-growth",
+        publisher="Groww",
+        doc_type="groww_page",
+        scheme="mid_cap",
+        title="Groww Mid Cap",
+        expected_topics=["expense_ratio", "riskometer", "benchmark"],
+    )
+    html = """
+    <html><body>
+      <script id="__NEXT_DATA__" type="application/json">
+      {"props":{"pageProps":{"mfServerSideData":{
+        "scheme_name":"HDFC Mid Cap Fund Direct Growth",
+        "expense_ratio":"0.74",
+        "exit_load":"Exit load of 1% if redeemed within 1 year.",
+        "benchmark":"NIFTY Midcap 150 TRI",
+        "min_sip_investment":100,
+        "return_stats":[{"risk":"Very High"}],
+        "lock_in":{"years":null}
+      }}}}
+      </script>
+      <p>Ignore this marketing copy about stocks and ETFs.</p>
+    </body></html>
+    """.encode("utf-8")
+
+    records = normalize_html(html, groww_spec)
+    texts = [record.text for record in records]
+    assert any("Riskometer: Very High" in text for text in texts)
+    assert any("Benchmark: NIFTY Midcap 150 TRI" in text for text in texts)
+    assert any("Total Expense Ratio (TER): 0.74%" in text for text in texts)
+    assert any("Minimum SIP: ₹ 100" in text for text in texts)
+    assert not any("Fund returns" in text for text in texts)
 
 
 def test_normalize_html_extracts_scheme_fact_cards(spec):
@@ -159,7 +206,7 @@ def test_dedupe_records():
 
 
 def test_normalize_source_from_raw_html(config, spec):
-    raw = config.app.artifact_dir / "raw" / "hdfc_mid_cap_page.html"
+    raw = config.app.artifact_dir / "raw" / "groww_mid_cap_page.html"
     raw.parent.mkdir(parents=True, exist_ok=True)
     raw.write_bytes(HTML)
     result = FetchResult(
@@ -168,7 +215,7 @@ def test_normalize_source_from_raw_html(config, spec):
         status="ok",
         content_type="text/html; charset=utf-8",
         fetched_at="2026-11-01T00:00:00+00:00",
-        local_path="artifacts/raw/hdfc_mid_cap_page.html",
+        local_path="artifacts/raw/groww_mid_cap_page.html",
     )
     records, pages, error = normalize_source(spec, result, config.project_root)
     assert error is None
@@ -177,7 +224,7 @@ def test_normalize_source_from_raw_html(config, spec):
 
 
 def test_run_normalize_writes_jsonl_and_coverage(config, spec):
-    raw = config.app.artifact_dir / "raw" / "hdfc_mid_cap_page.html"
+    raw = config.app.artifact_dir / "raw" / "groww_mid_cap_page.html"
     raw.parent.mkdir(parents=True, exist_ok=True)
     raw.write_bytes(HTML)
     result = FetchResult(
@@ -186,14 +233,14 @@ def test_run_normalize_writes_jsonl_and_coverage(config, spec):
         status="ok",
         content_type="text/html; charset=utf-8",
         fetched_at="2026-11-01T00:00:00+00:00",
-        local_path="artifacts/raw/hdfc_mid_cap_page.html",
+        local_path="artifacts/raw/groww_mid_cap_page.html",
     )
     write_manifest(build_manifest([result], config), config)
 
     inventory = config.project_root / "sources.csv"
     inventory.write_text(
         "source_id,url,publisher,doc_type,scheme,title,expected_topics\n"
-        f"{spec.source_id},{spec.url},HDFC AMC,scheme_page,mid_cap,Test,expense_ratio|exit_load\n",
+        f"{spec.source_id},{spec.url},Groww,groww_page,mid_cap,Test,expense_ratio|exit_load\n",
         encoding="utf-8",
     )
 
@@ -201,7 +248,7 @@ def test_run_normalize_writes_jsonl_and_coverage(config, spec):
     assert payload["summary"]["ok"] == 1
     assert payload["summary"]["records"] > 0
 
-    jsonl = config.app.artifact_dir / "normalized" / "hdfc_mid_cap_page.jsonl"
+    jsonl = config.app.artifact_dir / "normalized" / "groww_mid_cap_page.jsonl"
     assert jsonl.exists()
     rows = [json.loads(line) for line in jsonl.read_text(encoding="utf-8").splitlines()]
     assert rows and rows[0]["section_path"]
@@ -219,7 +266,7 @@ def test_run_normalize_requires_manifest(config):
 
 
 def test_run_normalize_marks_empty_page_unusable(config, spec):
-    raw = config.app.artifact_dir / "raw" / "hdfc_mid_cap_page.html"
+    raw = config.app.artifact_dir / "raw" / "groww_mid_cap_page.html"
     raw.parent.mkdir(parents=True, exist_ok=True)
     raw.write_bytes(b"<html><body><script>var x = 1;</script></body></html>")
     result = FetchResult(
@@ -228,13 +275,13 @@ def test_run_normalize_marks_empty_page_unusable(config, spec):
         status="ok",
         content_type="text/html",
         fetched_at="2026-11-01T00:00:00+00:00",
-        local_path="artifacts/raw/hdfc_mid_cap_page.html",
+        local_path="artifacts/raw/groww_mid_cap_page.html",
     )
     write_manifest(build_manifest([result], config), config)
     inventory = config.project_root / "sources.csv"
     inventory.write_text(
         "source_id,url,publisher,doc_type,scheme,title,expected_topics\n"
-        f"{spec.source_id},{spec.url},HDFC AMC,scheme_page,mid_cap,Test,exit_load\n",
+        f"{spec.source_id},{spec.url},Groww,groww_page,mid_cap,Test,exit_load\n",
         encoding="utf-8",
     )
     payload = run_normalize(config, inventory_path=inventory)

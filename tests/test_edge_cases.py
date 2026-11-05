@@ -66,7 +66,7 @@ def test_advice_refusal_has_education_link_and_suggestions(client):
     payload = response.json()
     assert payload["type"] == "refusal_advice"
     assert len(_urls(payload)) == 1
-    assert "sebi.gov.in" in payload["source_url"]
+    assert "groww.in" in payload["source_url"]
     assert len(payload["can_do"]) == 3
     assert payload["chunks_used"] == []
 
@@ -78,7 +78,7 @@ def test_performance_refusal_has_factsheet_link_and_no_numbers(client):
 
     payload = response.json()
     assert payload["type"] == "refusal_performance"
-    assert payload["source_url"] == "https://www.hdfcfund.com/mutual-funds/factsheets"
+    assert payload["source_url"] == "https://groww.in/mutual-funds/amc/hdfc-mutual-funds"
     assert not any(character.isdigit() for character in payload["answer"])
     assert payload["can_do"]
 

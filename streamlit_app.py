@@ -63,15 +63,15 @@ TYPE_LABELS = {
 TYPE_TAGS = {
     "refusal_advice": "No advice or recommendations.",
     "refusal_performance": "No return or performance views.",
-    "not_in_sources": "Only curated Groww, HDFC AMC, SEBI, and AMFI pages are used.",
+    "not_in_sources": "Only curated Groww scheme pages are used.",
     "clarify": "Scheme context is required for this fact.",
     "pii": "Personal data is not shown, logged, or stored.",
     "error": "No unverified answer is shown.",
 }
 DISCLAIMER = (
-    "Facts-only. No investment advice. Answers cite one curated source "
-    "(Groww scheme pages, HDFC AMC, SEBI, or AMFI). Mutual fund investments "
-    "are subject to market risks; read all scheme-related documents carefully."
+    "Facts-only. No investment advice. Answers cite one curated Groww scheme "
+    "page. Mutual fund investments are subject to market risks; read all "
+    "scheme-related documents carefully."
 )
 GITHUB_URL = "https://github.com/Noira-Khan/groww-ai-hdfc-mf-facts"
 GROWW_BLUE = "#5367FF"
@@ -318,9 +318,8 @@ def _render_config_error(runtime: Runtime) -> None:
 
 def _render_setup(config: Config) -> None:
     st.warning(
-        "The official knowledge base has not been built in this deployment yet. "
-        "It is created once from curated Groww scheme pages plus HDFC AMC, SEBI, "
-        "and AMFI sources."
+        "The knowledge base has not been built in this deployment yet. "
+        "It is created once from five curated Groww scheme/AMC pages."
     )
     st.markdown(
         "**What happens when you initialize:**\n"
@@ -708,7 +707,7 @@ def render_hero() -> None:
             </h1>
             <p style="font-size:16px;color:#6b7289;margin:0 0 18px;">
                 Exit load, TER, SIP minimums, lock-in, riskometer, and benchmarks
-                from Groww pages plus official HDFC AMC, SEBI, and AMFI sources.
+                from five curated Groww scheme pages.
             </p>
             <div style="display:inline-block;padding:12px 16px;
                 background:#f7f8ff;border:1px solid #e2e6f5;border-radius:12px;

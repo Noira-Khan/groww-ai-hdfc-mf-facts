@@ -344,36 +344,40 @@ def test_retrieve_prefers_value_bearing_riskometer_chunk(config, monkeypatch):
     assert len(result.chunks) <= 3
 
 
-def test_retrieve_prefers_amc_wide_statement_guide(config, monkeypatch):
+def test_retrieve_prefers_groww_page_for_scheme_facts(config, monkeypatch):
     config.retrieval.max_context_chunks = 3
     _install(
         monkeypatch,
         [
             _row(
-                "kim_noise",
+                "noise",
                 0.20,
-                "A Consolidated Account Statement (CAS) is sent monthly.",
-                source_id="hdfc_large_cap_kim",
-                doc_type="kim",
-                scheme="large_cap",
-                topic="statements",
-                section="Unit Holder Information",
-            ),
-            _row(
-                "guide",
-                0.25,
-                "Please enter your folio number to request an account statement by email.",
-                source_id="hdfc_statement_guide",
-                doc_type="statement_guide",
+                "General mutual fund education about statements and folios.",
+                source_id="groww_hdfc_amc",
+                doc_type="groww_page",
+                publisher="Groww",
                 scheme="amc_wide",
-                topic="statements",
-                section="Request statement",
+                topic="general",
+                section="Overview",
+                url="https://groww.in/mutual-funds/amc/hdfc-mutual-funds",
             ),
             _row(
-                "edu",
+                "value",
+                0.25,
+                "Riskometer: Very High",
+                source_id="groww_large_cap_page",
+                doc_type="groww_page",
+                publisher="Groww",
+                scheme="large_cap",
+                topic="riskometer",
+                section="Scheme Facts",
+                url="https://groww.in/mutual-funds/hdfc-large-cap-fund-direct-growth",
+            ),
+            _row(
+                "other",
                 0.18,
                 "Account statement errors may be a sign of fraud.",
-                source_id="sebi_investor_booklet",
+                source_id="other_page",
                 doc_type="education",
                 scheme="amc_wide",
                 topic="statements",
@@ -383,12 +387,13 @@ def test_retrieve_prefers_amc_wide_statement_guide(config, monkeypatch):
     )
 
     result = retrieve(
-        config, "How do I request an account statement?", model=FakeModel()
+        config,
+        "What is the riskometer of HDFC Large Cap Fund?",
+        scheme="large_cap",
+        model=FakeModel(),
     )
 
-    assert result.chunks[0].chunk_id == "guide"
-    assert [chunk.chunk_id for chunk in result.chunks][0:2] == ["guide", "kim_noise"]
-    assert "edu" not in [chunk.chunk_id for chunk in result.chunks[:2]]
+    assert result.chunks[0].chunk_id == "value"
 
 
 def test_retrieved_chunk_accessors():

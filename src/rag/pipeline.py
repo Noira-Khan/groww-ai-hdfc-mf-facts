@@ -146,7 +146,7 @@ def _not_in_sources_envelope(
     return {
         "type": "not_in_sources",
         "answer": (
-            "That fact is not covered by my curated official sources."
+            "That fact is not covered by my curated Groww sources."
         ),
         "source_url": SCHEME_DOCUMENTS_URL,
         "source_name": "HDFC AMC",

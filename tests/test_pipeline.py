@@ -12,7 +12,7 @@ from src.rag.pipeline import answer_question
 from src.rag.retrieve import RetrievalResult, RetrievedChunk
 
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "config.yaml"
-URL = "https://files.hdfcfund.com/KIM/flexi-cap.pdf"
+URL = "https://groww.in/mutual-funds/hdfc-equity-fund-direct-growth"
 TEXT = "Exit load is 1% for redemptions within one year."
 
 
@@ -34,8 +34,8 @@ def _chunk() -> RetrievedChunk:
         text=TEXT,
         metadata={
             "url": URL,
-            "publisher": "HDFC AMC",
-            "doc_type": "kim",
+            "publisher": "Groww",
+            "doc_type": "groww_page",
             "scheme": "flexi_cap",
             "section": "Exit load",
             "as_on_date": "2026-01-02",
@@ -71,7 +71,7 @@ def test_answer_question_builds_envelope_and_caches(config, monkeypatch):
 
     assert envelope["type"] == "answer"
     assert envelope["source_url"] == URL
-    assert envelope["source_name"] == "HDFC AMC"
+    assert envelope["source_name"] == "Groww"
     assert envelope["as_on_date"] == "2026-01-02"
     assert envelope["chunks_used"] == ["c1"]
     assert envelope["request_id"] == "req123"

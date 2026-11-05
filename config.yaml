@@ -5,7 +5,7 @@ app:
   artifact_dir: "data/artifacts"
 
 ingestion:
-  allowlist_publishers: [HDFC AMC, SEBI, AMFI, Groww]
+  allowlist_publishers: [Groww]
   request_timeout_s: 30
   max_retries: 3
   request_delay_ms: 800

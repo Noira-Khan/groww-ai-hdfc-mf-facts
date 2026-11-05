@@ -7,10 +7,11 @@ from typing import Any
 from src.safety.intent import SCHEME_LABELS, SUPPORTED_SCHEMES
 from src.suggestions import SAFE_QUESTIONS
 
-STATEMENT_URL = "https://www.hdfcfund.com/services/additional-info/request-statement"
-SCHEME_DOCUMENTS_URL = "https://www.hdfcfund.com/mutual-funds/fund-documents/kim"
-FACTSHEET_URL = "https://www.hdfcfund.com/mutual-funds/factsheets"
-ADVICE_EDUCATION_URL = "https://investor.sebi.gov.in/"
+GROWW_AMC_URL = "https://groww.in/mutual-funds/amc/hdfc-mutual-funds"
+STATEMENT_URL = GROWW_AMC_URL
+SCHEME_DOCUMENTS_URL = GROWW_AMC_URL
+FACTSHEET_URL = GROWW_AMC_URL
+ADVICE_EDUCATION_URL = GROWW_AMC_URL
 
 
 def envelope(
@@ -44,7 +45,7 @@ def pii_response(request_id: str) -> dict[str, Any]:
         "Please do not share personal information such as PAN, Aadhaar, phone, "
         "email, OTP, or folio numbers.",
         source_url=STATEMENT_URL,
-        source_name="HDFC AMC",
+        source_name="Groww",
         can_do=list(SAFE_QUESTIONS),
         request_id=request_id,
     )
@@ -55,7 +56,7 @@ def advice_response(request_id: str) -> dict[str, Any]:
         "refusal_advice",
         "I can share factual information, not investment advice or recommendations.",
         source_url=ADVICE_EDUCATION_URL,
-        source_name="SEBI",
+        source_name="Groww",
         can_do=list(SAFE_QUESTIONS),
         request_id=request_id,
     )
@@ -66,7 +67,7 @@ def performance_response(request_id: str) -> dict[str, Any]:
         "refusal_performance",
         "I do not compute, compare, or comment on returns or performance.",
         source_url=FACTSHEET_URL,
-        source_name="HDFC AMC",
+        source_name="Groww",
         can_do=list(SAFE_QUESTIONS),
         request_id=request_id,
     )
@@ -75,9 +76,9 @@ def performance_response(request_id: str) -> dict[str, Any]:
 def not_in_sources_response(request_id: str) -> dict[str, Any]:
     return envelope(
         "not_in_sources",
-        "That fact is not covered by my curated official sources.",
+        "That fact is not covered by my curated Groww sources.",
         source_url=SCHEME_DOCUMENTS_URL,
-        source_name="HDFC AMC",
+        source_name="Groww",
         can_do=list(SAFE_QUESTIONS),
         request_id=request_id,
     )
@@ -90,7 +91,7 @@ def clarify_response(question: str, request_id: str) -> dict[str, Any]:
         "clarify",
         "Which HDFC scheme do you mean? Choose one to continue.",
         source_url=SCHEME_DOCUMENTS_URL,
-        source_name="HDFC AMC",
+        source_name="Groww",
         can_do=questions,
         request_id=request_id,
     )

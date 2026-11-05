@@ -305,6 +305,130 @@ def _records_from_soup(
     return records
 
 
+def _groww_risk_label(mf: dict) -> str | None:
+    """Prefer live risk from return stats over stale NFO risk labels."""
+    for item in mf.get("return_stats") or []:
+        if isinstance(item, dict):
+            risk = item.get("risk")
+            if isinstance(risk, str) and risk.strip():
+                return risk.strip()
+    for key in ("risk", "riskometer"):
+        value = mf.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    nfo = mf.get("nfo_risk")
+    if isinstance(nfo, str) and nfo.strip():
+        return re.sub(r"\s*riskometer\s*$", "", nfo.strip(), flags=re.I).strip()
+    return None
+
+
+def _groww_lock_in_years(mf: dict) -> int | None:
+    lock = mf.get("lock_in")
+    if isinstance(lock, dict):
+        years = lock.get("years")
+        if isinstance(years, (int, float)) and years > 0:
+            return int(years)
+    for key in ("lock_in_yrs", "lockin_period", "lock_in_period"):
+        value = mf.get(key)
+        if isinstance(value, (int, float)) and value > 0:
+            return int(value)
+    return None
+
+
+def _records_from_groww_next_data(
+    html: str,
+    spec: SourceSpec,
+    as_on_date: str | None,
+    fetched_at: str | None,
+) -> list[TextRecord]:
+    """Extract scheme facts from Groww's embedded __NEXT_DATA__ payload."""
+    match = re.search(
+        r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>',
+        html,
+        re.S,
+    )
+    if not match:
+        return []
+    try:
+        payload = json.loads(match.group(1))
+    except json.JSONDecodeError:
+        return []
+
+    mf = (
+        payload.get("props", {})
+        .get("pageProps", {})
+        .get("mfServerSideData")
+    )
+    if not isinstance(mf, dict) or not mf:
+        return []
+
+    lines: list[str] = []
+    scheme_name = mf.get("scheme_name")
+    if isinstance(scheme_name, str) and scheme_name.strip():
+        lines.append(f"Scheme: {scheme_name.strip()}")
+
+    risk = _groww_risk_label(mf)
+    if risk:
+        lines.append(f"Riskometer: {risk}")
+
+    benchmark = mf.get("benchmark") or mf.get("benchmark_name")
+    if isinstance(benchmark, str) and benchmark.strip():
+        lines.append(f"Benchmark: {benchmark.strip()}")
+
+    expense = mf.get("expense_ratio")
+    if expense is not None and str(expense).strip():
+        value = str(expense).strip()
+        if not value.endswith("%"):
+            value = f"{value}%"
+        lines.append(f"Total Expense Ratio (TER): {value}")
+
+    exit_load = mf.get("exit_load")
+    if isinstance(exit_load, str) and exit_load.strip():
+        text = exit_load.strip()
+        if not text.lower().startswith("exit load"):
+            text = f"Exit load: {text}"
+        elif not text.lower().startswith("exit load:"):
+            text = re.sub(r"^exit load\b", "Exit load:", text, count=1, flags=re.I)
+        lines.append(text)
+
+    min_sip = mf.get("min_sip_investment")
+    if isinstance(min_sip, (int, float)) and min_sip > 0:
+        amount = int(min_sip) if float(min_sip).is_integer() else min_sip
+        lines.append(f"Minimum SIP: ₹ {amount}")
+
+    lock_years = _groww_lock_in_years(mf)
+    if lock_years:
+        lines.append(f"Lock-in: {lock_years} years")
+
+    if not lines:
+        return []
+
+    # One combined card plus individual lines so topic retrieval can match cleanly.
+    records = [
+        _make_record(
+            spec,
+            as_on_date,
+            fetched_at,
+            ["Scheme Facts"],
+            None,
+            "\n".join(lines),
+        )
+    ]
+    for line in lines:
+        label = line.split(":", 1)[0].strip()
+        records.append(
+            _make_record(
+                spec,
+                as_on_date,
+                fetched_at,
+                ["Scheme Facts", label],
+                None,
+                line,
+            )
+        )
+    return records
+
+
 def normalize_html(
     data: bytes,
     spec: SourceSpec,
@@ -317,17 +441,27 @@ def normalize_html(
     full_text = _clean_block(full_soup.get_text(" ", strip=True))
     as_on_date = extract_date(full_text[:20000])
 
+    records: list[TextRecord] = []
+    if spec.doc_type == "groww_page":
+        records.extend(
+            _records_from_groww_next_data(html, spec, as_on_date, fetched_at)
+        )
+
     soup = _main_soup(html)
     _strip_boilerplate(soup)
-    records = _records_from_soup(soup, spec, as_on_date, fetched_at)
+    records.extend(_records_from_soup(soup, spec, as_on_date, fetched_at))
     records.extend(_records_from_fact_cards(full_soup, spec, as_on_date, fetched_at))
 
     existing = {record.text for record in records}
-    for table in full_soup.find_all("table"):
-        markdown = _table_to_markdown(table)
-        if markdown and markdown not in existing:
-            records.append(_make_record(spec, as_on_date, fetched_at, ["Tables"], None, markdown))
-            existing.add(markdown)
+    # Skip return/performance tables on Groww pages; facts come from NEXT_DATA.
+    if spec.doc_type != "groww_page":
+        for table in full_soup.find_all("table"):
+            markdown = _table_to_markdown(table)
+            if markdown and markdown not in existing:
+                records.append(
+                    _make_record(spec, as_on_date, fetched_at, ["Tables"], None, markdown)
+                )
+                existing.add(markdown)
 
     return dedupe_records(records)
 

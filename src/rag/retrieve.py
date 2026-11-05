@@ -18,17 +18,17 @@ from src.store.chroma import get_collection
 PREFERRED_DOC_TYPES = {"kim", "sid", "factsheet", "scheme_page", "groww_page"}
 LOWER_PRIORITY_DOC_TYPES = {"catalogue", "faq", "education"}
 AMC_WIDE_SCHEMES = frozenset({"", "amc_wide", "all", "general", "none"})
-GROWW_SCHEME_FACT_DOCS = {"groww_page", "scheme_page", "kim", "factsheet"}
+GROWW_SCHEME_FACT_DOCS = {"groww_page"}
 TOPIC_PREFERRED_DOC_TYPES: dict[str, set[str]] = {
-    "statements": {"statement_guide", "faq"},
-    "capital_gains": {"statement_guide", "faq"},
-    "definitions": {"faq", "education", "scheme_page", "groww_page"},
+    "statements": {"groww_page"},
+    "capital_gains": {"groww_page"},
+    "definitions": {"groww_page"},
     "riskometer": set(GROWW_SCHEME_FACT_DOCS),
     "benchmark": set(GROWW_SCHEME_FACT_DOCS),
     "expense_ratio": set(GROWW_SCHEME_FACT_DOCS),
-    "exit_load": {"groww_page", "scheme_page", "kim", "sid"},
+    "exit_load": set(GROWW_SCHEME_FACT_DOCS),
     "min_sip": set(GROWW_SCHEME_FACT_DOCS),
-    "elss_lockin": {"groww_page", "scheme_page", "kim", "sid"},
+    "elss_lockin": set(GROWW_SCHEME_FACT_DOCS),
 }
 TOPIC_VALUE_PATTERNS: dict[str, re.Pattern[str]] = {
     "riskometer": re.compile(

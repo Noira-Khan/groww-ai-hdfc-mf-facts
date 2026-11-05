@@ -1,6 +1,6 @@
 # Groww Fund Facts
 
-A facts-only assistant for a small, curated set of HDFC Mutual Fund schemes, branded for Groww. It answers from curated Groww scheme pages plus official HDFC AMC, SEBI, and AMFI sources, cites exactly one allowlisted link, shows the source date, and refuses investment advice, performance comparisons, personal data, and out-of-corpus questions.
+A facts-only assistant for a small, curated set of HDFC Mutual Fund schemes, branded for Groww. It answers from **five curated Groww.in pages** (four Direct Growth schemes + the HDFC AMC page), cites exactly one allowlisted Groww link, shows the source date, and refuses investment advice, performance comparisons, personal data, and out-of-corpus questions.
 
 > Facts-only. No investment advice.
 
@@ -10,7 +10,7 @@ LLM provider and model stay in `.env` / Streamlit secrets (`GROQ_API_KEY`, `LLM_
 
 - Answers factual questions about HDFC Large Cap Fund, HDFC Flexi Cap Fund, HDFC ELSS Tax Saver, and HDFC Mid Cap Fund.
 - Covers facts such as exit load, lock-in, minimum SIP, expense ratio, riskometer, benchmark, and account-statement requests.
-- Prefers Groww Direct Growth scheme pages for scheme-fact citations so links open on groww.in for quick spotting.
+- Cites Groww Direct Growth scheme pages so links open on groww.in for quick spotting.
 - Returns answers with a single allowlisted source URL, the source `as_on_date`, a verbatim proof passage, and expandable pipeline/passages transparency in Streamlit.
 - Routes advice, performance, PII, injection, ambiguous, and out-of-corpus questions to fixed safe responses.
 - Keeps answers to at most three sentences and validates every number against retrieved context.
@@ -207,7 +207,7 @@ Key settings in `config.yaml`:
 - `llm.provider`, `llm.model`, temperature, and timeout control generation (defaults: Groq + `LLM_MODEL_ID` from `.env`).
 - `safety.detect_pii`, `safety.max_repair_retries`, and `safety.cache_answers` control guardrails.
 - `app.max_answer_sentences` is enforced by validation.
-- `ingestion.allowlist_publishers` includes Groww, HDFC AMC, SEBI, and AMFI.
+- `ingestion.allowlist_publishers` is Groww-only; `sources.csv` lists exactly five Groww URLs.
 
 `llm.model` is read from `LLM_MODEL_ID` in `.env`.
 

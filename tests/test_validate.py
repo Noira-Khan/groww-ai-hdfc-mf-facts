@@ -14,7 +14,7 @@ from src.rag.validate import (
 )
 
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "config.yaml"
-URL = "https://files.hdfcfund.com/KIM/flexi-cap.pdf"
+URL = "https://groww.in/mutual-funds/hdfc-equity-fund-direct-growth"
 TEXT = "Exit load is 1% for redemptions within one year."
 
 
@@ -30,7 +30,7 @@ def _chunk(
     chunk_id: str = "c1",
     text: str = TEXT,
     url: str = URL,
-    publisher: str = "HDFC AMC",
+    publisher: str = "Groww",
     as_on_date: str = "2026-01-02",
 ) -> RetrievedChunk:
     return RetrievedChunk(
@@ -40,7 +40,7 @@ def _chunk(
         metadata={
             "url": url,
             "publisher": publisher,
-            "doc_type": "kim",
+            "doc_type": "groww_page",
             "scheme": "flexi_cap",
             "topic": "exit_load",
             "section": "Exit load",
@@ -66,7 +66,7 @@ def test_valid_candidate(config):
 
     assert result.ok is True
     assert result.issues == []
-    assert result.source_name == "HDFC AMC"
+    assert result.source_name == "Groww"
     assert result.as_on_date == "2026-01-02"
 
 
@@ -123,7 +123,7 @@ def test_rejects_non_allowlisted_or_unretrieved_url(config):
     )
     assert "url_not_allowlisted" in {issue.code for issue in bad_host.issues}
 
-    other_official = "https://www.hdfcfund.com/other.pdf"
+    other_official = "https://groww.in/mutual-funds/hdfc-mid-cap-fund-direct-growth"
     not_retrieved = validate_candidate(
         config,
         _candidate(
@@ -212,7 +212,7 @@ def test_proof_must_come_from_cited_url(config):
     other = _chunk(
         "c2",
         text=TEXT,
-        url="https://www.hdfcfund.com/other.pdf",
+        url="https://groww.in/mutual-funds/hdfc-mid-cap-fund-direct-growth",
     )
     result = validate_candidate(
         config,

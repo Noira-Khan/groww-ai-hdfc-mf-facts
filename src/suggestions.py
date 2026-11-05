@@ -50,8 +50,9 @@ CURATED_SUGGESTIONS: tuple[Suggestion, ...] = (
         "mid_cap",
     ),
     Suggestion(
-        "How do I request an account statement?",
-        "statements",
+        "What is the exit load of HDFC Mid Cap Fund?",
+        "exit_load",
+        "mid_cap",
     ),
     Suggestion(
         "What is the riskometer of HDFC ELSS Tax Saver?",

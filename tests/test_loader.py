@@ -79,8 +79,8 @@ def spec(source_id: str, url: str, **overrides) -> SourceSpec:
     base = SourceSpec(
         source_id=source_id,
         url=url,
-        publisher="HDFC AMC",
-        doc_type="scheme_page",
+        publisher="Groww",
+        doc_type="groww_page",
         scheme="large_cap",
         title="Test source",
         expected_topics=["exit_load"],
@@ -132,15 +132,17 @@ def test_load_inventory_requires_columns(tmp_path):
 def test_shipped_inventory_is_valid(config):
     specs = load_inventory(CONFIG_PATH.parent / "sources.csv")
     validate_inventory(specs, config.ingestion.allowlist_publishers)
-    assert 15 <= len(specs) <= 30
-    assert all(
-        spec.publisher in {"HDFC AMC", "SEBI", "AMFI", "Groww"} for spec in specs
-    )
-    assert any(spec.doc_type == "groww_page" for spec in specs)
+    assert len(specs) == 5
+    assert all(spec.publisher == "Groww" for spec in specs)
+    assert all(spec.doc_type == "groww_page" for spec in specs)
+    assert all("groww.in" in spec.url for spec in specs)
 
 
 def test_validate_rejects_host_mismatch(config):
-    bad = spec("hdfc_bad", "https://www.sebi.gov.in/legal/circulars/x.html")
+    bad = spec(
+        "groww_bad",
+        "https://www.sebi.gov.in/legal/circulars/x.html",
+    )
     with pytest.raises(ValueError, match="does not belong"):
         validate_inventory([bad], config.ingestion.allowlist_publishers)
 
@@ -152,19 +154,26 @@ def test_validate_rejects_unknown_publisher(config):
 
 
 def test_validate_rejects_non_http_url(config):
-    bad = spec("hdfc_bad", "ftp://www.hdfcfund.com/x")
+    bad = spec("groww_bad", "ftp://groww.in/mutual-funds/x")
     with pytest.raises(ValueError, match="absolute http"):
         validate_inventory([bad], config.ingestion.allowlist_publishers)
 
 
 def test_validate_rejects_duplicate_ids(config):
-    good = spec("hdfc_dup", "https://www.hdfcfund.com/explore/mutual-funds/hdfc-mid-cap-fund/regular")
+    good = spec(
+        "groww_dup",
+        "https://groww.in/mutual-funds/hdfc-mid-cap-fund-direct-growth",
+    )
     with pytest.raises(ValueError, match="duplicate"):
         validate_inventory([good, good], config.ingestion.allowlist_publishers)
 
 
 def test_validate_rejects_unknown_topic(config):
-    bad = spec("hdfc_bad", "https://www.hdfcfund.com/x", expected_topics=["tax_advice"])
+    bad = spec(
+        "groww_bad",
+        "https://groww.in/mutual-funds/x",
+        expected_topics=["tax_advice"],
+    )
     with pytest.raises(ValueError, match="unknown topics"):
         validate_inventory([bad], config.ingestion.allowlist_publishers)
 
@@ -288,5 +297,5 @@ def test_merge_with_existing_keeps_prior_sources(config, server):
 def test_run_load_dry_run_does_not_download(config):
     result = run_load(config, inventory_path=CONFIG_PATH.parent / "sources.csv", dry_run=True)
     assert result["dry_run"] is True
-    assert len(result["sources"]) >= 15
+    assert len(result["sources"]) == 5
     assert read_manifest(config) is None
