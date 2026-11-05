@@ -207,9 +207,13 @@ def test_rejects_paraphrased_proof(config):
     assert "proof_not_verbatim" in {issue.code for issue in result.issues}
 
 
-def test_proof_must_come_from_cited_chunk(config):
+def test_proof_must_come_from_cited_url(config):
     cited = _chunk("c1", text="A different passage.")
-    other = _chunk("c2", text=TEXT)
+    other = _chunk(
+        "c2",
+        text=TEXT,
+        url="https://www.hdfcfund.com/other.pdf",
+    )
     result = validate_candidate(
         config,
         _candidate(),
@@ -217,6 +221,19 @@ def test_proof_must_come_from_cited_chunk(config):
         "exit load",
     )
     assert "proof_not_verbatim" in {issue.code for issue in result.issues}
+
+
+def test_proof_can_come_from_any_chunk_sharing_cited_url(config):
+    first = _chunk("c1", text="Intro text only.")
+    second = _chunk("c2", text=TEXT)
+    result = validate_candidate(
+        config,
+        _candidate(),
+        [first, second],
+        "exit load",
+    )
+    assert result.ok is True
+    assert result.issues == []
 
 
 def test_rejects_pii_echo(config):

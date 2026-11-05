@@ -11,7 +11,7 @@ from src.rag.retrieve import retrieve
 from src.safety.intent import classify_question
 from src.suggestions import CURATED_SUGGESTIONS, DEFAULT_SUGGESTIONS, Suggestion
 
-SUGGESTIONS_VERSION = 1
+SUGGESTIONS_VERSION = 2
 
 
 def suggestions_path(config: Config) -> Path:
@@ -39,7 +39,7 @@ def _settings(config: Config) -> dict:
     }
 
 
-def load_suggestions(config: Config, limit: int = 6) -> list[dict] | None:
+def load_suggestions(config: Config, limit: int = 8) -> list[dict] | None:
     """Return a matching cached suggestion list, or None when stale/missing."""
     path = suggestions_path(config)
     try:
@@ -71,7 +71,7 @@ def load_suggestions(config: Config, limit: int = 6) -> list[dict] | None:
     return valid[:limit]
 
 
-def resolve_suggestions(config: Config, limit: int = 6) -> list[str]:
+def resolve_suggestions(config: Config, limit: int = 8) -> list[str]:
     """Return verified questions, falling back to the curated defaults."""
     cached = load_suggestions(config, limit=limit)
     if cached is not None:
@@ -82,6 +82,8 @@ def resolve_suggestions(config: Config, limit: int = 6) -> list[str]:
 def _verify(
     config: Config, suggestion: Suggestion, model
 ) -> dict | None:
+    from src.rag.topics import text_matches_topic
+
     intent = classify_question(suggestion.question)
     if intent.route != "answer":
         return None
@@ -96,15 +98,20 @@ def _verify(
         return None
 
     top = result.chunks[0]
-    if suggestion.topic and top.metadata.get("topic") != suggestion.topic:
-        return None
+    if suggestion.topic:
+        topic_ok = top.metadata.get("topic") == suggestion.topic or text_matches_topic(
+            suggestion.topic, top.section, top.text
+        )
+        if not topic_ok:
+            return None
     if suggestion.scheme and top.metadata.get("scheme") != suggestion.scheme:
         return None
 
     required = max(
         suggestion.min_score, config.retrieval.suggestion_score_threshold
     )
-    if top.score < required:
+    score = top.raw_score if top.raw_score is not None else top.score
+    if score < required and top.score < required:
         return None
 
     return {
@@ -117,7 +124,7 @@ def _verify(
     }
 
 
-def build_suggestions(config: Config, model=None, limit: int = 6) -> list[dict]:
+def build_suggestions(config: Config, model=None, limit: int = 8) -> list[dict]:
     """Retrieve each curated question and keep only confident matches."""
     if model is None:
         from src.ingest.embed import load_model
@@ -138,7 +145,7 @@ def build_suggestions(config: Config, model=None, limit: int = 6) -> list[dict]:
     return verified
 
 
-def write_suggestions(config: Config, model=None, limit: int = 6) -> dict:
+def write_suggestions(config: Config, model=None, limit: int = 8) -> dict:
     """Verify, then write the current suggestion artifact."""
     cached = load_suggestions(config, limit=limit)
     if cached is not None:

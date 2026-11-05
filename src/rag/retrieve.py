@@ -12,14 +12,23 @@ from pathlib import Path
 from src.config import Config
 from src.ingest.embed import load_model
 from src.rag.topics import detect_topic, text_matches_topic
+from src.safety.intent import SUPPORTED_SCHEMES
 from src.store.chroma import get_collection
 
 PREFERRED_DOC_TYPES = {"kim", "sid", "factsheet", "scheme_page"}
-LOWER_PRIORITY_DOC_TYPES = {"catalogue", "faq"}
+LOWER_PRIORITY_DOC_TYPES = {"catalogue", "faq", "education"}
+AMC_WIDE_SCHEMES = frozenset({"", "amc_wide", "all", "general", "none"})
+TOPIC_PREFERRED_DOC_TYPES: dict[str, set[str]] = {
+    "statements": {"statement_guide", "faq"},
+    "capital_gains": {"statement_guide", "faq"},
+    "definitions": {"faq", "education", "scheme_page"},
+}
 SOURCE_PREFERENCE_WINDOW = 0.05
 NEAR_DUPLICATE_RATIO = 0.95
 LEXICAL_BOOST_MAX = 0.05
-LOWER_PRIORITY_PENALTY = 0.02
+LOWER_PRIORITY_PENALTY = 0.03
+CROSS_SCHEME_PENALTY = 0.10
+TOPIC_DOC_BOOST = 0.06
 STOPWORDS = frozenset(
     {
         "a",
@@ -112,17 +121,28 @@ def _dedupe(chunks: list[RetrievedChunk]) -> list[RetrievedChunk]:
     return kept
 
 
-def _prefer_official_sources(chunks: list[RetrievedChunk]) -> list[RetrievedChunk]:
+def _preferred_doc_types(detected_topic: str | None) -> set[str]:
+    preferred = set(PREFERRED_DOC_TYPES)
+    if detected_topic:
+        preferred |= TOPIC_PREFERRED_DOC_TYPES.get(detected_topic, set())
+    return preferred
+
+
+def _prefer_official_sources(
+    chunks: list[RetrievedChunk],
+    detected_topic: str | None = None,
+) -> list[RetrievedChunk]:
+    preferred_types = _preferred_doc_types(detected_topic)
     ordered: list[RetrievedChunk] = []
     for chunk in chunks:
         doc_type = chunk.metadata.get("doc_type", "")
-        preferred = doc_type in PREFERRED_DOC_TYPES
+        preferred = doc_type in preferred_types
         inserted = False
         if preferred:
             for position, existing in enumerate(ordered):
                 existing_type = existing.metadata.get("doc_type", "")
                 if (
-                    existing_type not in PREFERRED_DOC_TYPES
+                    existing_type not in preferred_types
                     and existing.score - chunk.score <= SOURCE_PREFERENCE_WINDOW
                 ):
                     ordered.insert(position, chunk)
@@ -131,6 +151,29 @@ def _prefer_official_sources(chunks: list[RetrievedChunk]) -> list[RetrievedChun
         if not inserted:
             ordered.append(chunk)
     return ordered
+
+
+def _cross_scheme_penalty(chunk: RetrievedChunk, query_scheme: str | None) -> float:
+    """When the question has no scheme, demote scheme-specific KIM/page chunks."""
+    if query_scheme:
+        return 0.0
+    meta_scheme = str(chunk.metadata.get("scheme") or "").strip().lower()
+    if meta_scheme in AMC_WIDE_SCHEMES:
+        return 0.0
+    if meta_scheme in SUPPORTED_SCHEMES or meta_scheme == "small_cap":
+        return CROSS_SCHEME_PENALTY
+    return 0.0
+
+
+def _topic_doc_boost(chunk: RetrievedChunk, detected_topic: str | None) -> float:
+    if not detected_topic:
+        return 0.0
+    preferred = TOPIC_PREFERRED_DOC_TYPES.get(detected_topic)
+    if not preferred:
+        return 0.0
+    if chunk.metadata.get("doc_type") in preferred:
+        return TOPIC_DOC_BOOST
+    return 0.0
 
 
 def _content_tokens(text: str) -> set[str]:
@@ -173,18 +216,21 @@ def _select_context(
     limit: int,
     detected_topic: str | None = None,
 ) -> list[RetrievedChunk]:
-    """Pick top context with source diversity and a topic-matched slot when possible."""
+    """Pick top context with source diversity, preferring topic-matched evidence."""
     if limit <= 0 or not chunks:
         return []
 
     selected: list[RetrievedChunk] = []
     seen_sources: set[str] = set()
+    preferred_types = _preferred_doc_types(detected_topic)
 
     def _source_key(chunk: RetrievedChunk) -> str:
         return str(chunk.metadata.get("source_id") or chunk.chunk_id)
 
     def _take(pool: list[RetrievedChunk], *, unique_source: bool) -> None:
         for chunk in pool:
+            if len(selected) >= limit:
+                return
             if chunk in selected:
                 continue
             key = _source_key(chunk)
@@ -192,15 +238,23 @@ def _select_context(
                 continue
             selected.append(chunk)
             seen_sources.add(key)
-            if len(selected) >= limit:
-                return
 
     topic_hits = [chunk for chunk in chunks if _matches_topic(chunk, detected_topic)]
-    if topic_hits:
-        _take(topic_hits[:1], unique_source=True)
-    _take(chunks, unique_source=True)
-    if len(selected) < limit:
-        _take(chunks, unique_source=False)
+    preferred_hits = [
+        chunk
+        for chunk in topic_hits
+        if chunk.metadata.get("doc_type") in preferred_types
+    ]
+    other_hits = [chunk for chunk in topic_hits if chunk not in preferred_hits]
+    non_hits = [chunk for chunk in chunks if chunk not in topic_hits]
+
+    # Exhaust preferred topic docs before weaker topic/non-topic fillers.
+    _take(preferred_hits, unique_source=True)
+    _take(preferred_hits, unique_source=False)
+    _take(other_hits, unique_source=True)
+    _take(other_hits, unique_source=False)
+    _take(non_hits, unique_source=True)
+    _take(chunks, unique_source=False)
     return selected
 
 
@@ -265,6 +319,8 @@ def retrieve(
         doc_type = chunk.metadata.get("doc_type", "")
         if doc_type in LOWER_PRIORITY_DOC_TYPES:
             chunk.score -= LOWER_PRIORITY_PENALTY
+        chunk.score -= _cross_scheme_penalty(chunk, scheme)
+        chunk.score += _topic_doc_boost(chunk, detected_topic)
         chunk.score += _lexical_boost(question, chunk)
         if detected_topic and config.retrieval.topic_boost > 0:
             if _matches_topic(chunk, detected_topic):
@@ -273,7 +329,7 @@ def retrieve(
     candidates.sort(key=lambda chunk: chunk.score, reverse=True)
     before_dedupe = len(candidates)
     deduped = _dedupe(candidates)
-    preferred = _prefer_official_sources(deduped)
+    preferred = _prefer_official_sources(deduped, detected_topic=detected_topic)
     selected = _select_context(
         preferred,
         config.retrieval.max_context_chunks,

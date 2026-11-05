@@ -238,6 +238,53 @@ def test_retrieve_diversifies_selected_sources(config, monkeypatch):
     assert selected_sources == ["page", "kim", "sid"]
 
 
+def test_retrieve_prefers_amc_wide_statement_guide(config, monkeypatch):
+    config.retrieval.max_context_chunks = 3
+    _install(
+        monkeypatch,
+        [
+            _row(
+                "kim_noise",
+                0.20,
+                "A Consolidated Account Statement (CAS) is sent monthly.",
+                source_id="hdfc_large_cap_kim",
+                doc_type="kim",
+                scheme="large_cap",
+                topic="statements",
+                section="Unit Holder Information",
+            ),
+            _row(
+                "guide",
+                0.25,
+                "Please enter your folio number to request an account statement by email.",
+                source_id="hdfc_statement_guide",
+                doc_type="statement_guide",
+                scheme="amc_wide",
+                topic="statements",
+                section="Request statement",
+            ),
+            _row(
+                "edu",
+                0.18,
+                "Account statement errors may be a sign of fraud.",
+                source_id="sebi_investor_booklet",
+                doc_type="education",
+                scheme="amc_wide",
+                topic="statements",
+                section="Education",
+            ),
+        ],
+    )
+
+    result = retrieve(
+        config, "How do I request an account statement?", model=FakeModel()
+    )
+
+    assert result.chunks[0].chunk_id == "guide"
+    assert [chunk.chunk_id for chunk in result.chunks][0:2] == ["guide", "kim_noise"]
+    assert "edu" not in [chunk.chunk_id for chunk in result.chunks[:2]]
+
+
 def test_retrieved_chunk_accessors():
     chunk = RetrievedChunk(
         chunk_id="a",

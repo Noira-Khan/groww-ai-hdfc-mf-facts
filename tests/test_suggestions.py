@@ -46,7 +46,7 @@ def test_build_suggestions_keeps_only_verified_questions(config, monkeypatch):
         lambda cfg, question, scheme=None, **kwargs: _retrieval(question, scheme),
     )
 
-    items = build_suggestions(config, model=object(), limit=6)
+    items = build_suggestions(config, model=object(), limit=8)
 
     assert [item["question"] for item in items] == list(DEFAULT_SUGGESTIONS)
     assert all(item["score"] == 0.9 for item in items)
@@ -106,4 +106,4 @@ def test_suggestion_artifact_roundtrip(config, monkeypatch):
 
 
 def test_resolve_suggestions_falls_back_to_curated_defaults(config):
-    assert resolve_suggestions(config, limit=6) == list(DEFAULT_SUGGESTIONS)
+    assert resolve_suggestions(config, limit=8) == list(DEFAULT_SUGGESTIONS)

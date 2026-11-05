@@ -147,13 +147,14 @@ def get_knowledge_base() -> bool:
 
 @st.cache_data(show_spinner=False)
 def get_suggested_questions() -> tuple[str, ...]:
-    """Load only questions that were verified against the current corpus."""
+    """Load gold factual questions verified against the current corpus."""
     runtime = get_runtime()
     if runtime.config is None:
         return DEFAULT_SUGGESTIONS
     from src.rag.suggestions import resolve_suggestions
 
-    return tuple(resolve_suggestions(runtime.config, limit=6))
+    verified = tuple(resolve_suggestions(runtime.config, limit=8))
+    return verified or DEFAULT_SUGGESTIONS
 
 
 def _source_link(url: str, name: str | None) -> None:
@@ -492,21 +493,30 @@ def _inject_ui_styles() -> None:
         }
         div[data-testid="stButton"] > button {
             width: 100%;
-            min-height: 78px;
-            height: auto;
-            white-space: normal;
+            min-height: 64px;
+            height: auto !important;
+            white-space: normal !important;
+            overflow-wrap: anywhere;
+            word-break: break-word;
             text-align: left;
             display: flex;
             align-items: flex-start;
-            justify-content: space-between;
-            padding: 12px 14px;
+            justify-content: flex-start;
+            padding: 14px 16px;
             border: 1px solid #e1e6e2;
             border-radius: 13px;
             background: #ffffff;
             color: #17211c;
-            font-size: 0.88rem;
-            line-height: 1.35;
+            font-size: 0.95rem;
+            line-height: 1.45;
             box-shadow: none;
+        }
+        div[data-testid="stButton"] > button p {
+            white-space: normal !important;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            text-align: left;
+            margin: 0;
         }
         div[data-testid="stButton"] > button:hover {
             border-color: #079c68;
@@ -640,18 +650,22 @@ def render_hero() -> None:
 
 
 def render_examples() -> None:
-    """Render six clickable, verified example questions."""
-    st.markdown("### Try asking")
-    questions = list(get_suggested_questions())[:6]
-    for row_index in range(0, len(questions), 3):
-        row = questions[row_index : row_index + 3]
-        columns = st.columns(3, gap="small")
+    """Render gold factual questions in a fully readable two-column grid."""
+    st.markdown("### Try these gold questions")
+    st.caption(
+        "Factual prompts from the evaluation set with verified retrieval coverage."
+    )
+    questions = list(get_suggested_questions())[:8]
+    for row_index in range(0, len(questions), 2):
+        row = questions[row_index : row_index + 2]
+        columns = st.columns(2, gap="medium")
         for column_index, question in enumerate(row):
             with columns[column_index]:
                 if st.button(
-                    question + "  ↗",
+                    question,
                     key=f"example_{row_index}_{column_index}",
                     width="stretch",
+                    help=question,
                 ):
                     _queue_followup(question)
 

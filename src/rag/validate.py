@@ -238,9 +238,14 @@ def validate_candidate(
     if not proof:
         issues.append(ValidationIssue("proof_missing", "proof is empty."))
     else:
-        cited = next((chunk for chunk in chunks if chunk.url == source_url), None)
-        pool = [cited] if cited is not None else chunks
-        if not any(proof in chunk.text for chunk in pool):
+        # All retrieved chunks that share the cited URL are valid proof sources.
+        # AMC-wide guides often contribute multiple chunks with the same URL.
+        pool = [chunk for chunk in chunks if chunk.url == source_url] or list(chunks)
+        normalized_proof = re.sub(r"\s+", " ", proof).strip()
+        if not any(
+            normalized_proof in re.sub(r"\s+", " ", chunk.text or "").strip()
+            for chunk in pool
+        ):
             issues.append(
                 ValidationIssue(
                     "proof_not_verbatim",
