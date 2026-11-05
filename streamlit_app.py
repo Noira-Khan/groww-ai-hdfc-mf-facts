@@ -162,12 +162,10 @@ def get_suggested_questions() -> tuple[str, ...]:
 def _source_link(url: str, name: str | None) -> None:
     from src.rag.validate import is_allowlisted_url
 
-    label = name or "Source"
-    host = "groww.in" if "groww.in" in url else (name or "source")
     if is_allowlisted_url(url):
-        st.markdown(f"**Source:** [{label}]({url})  \n`{host}`")
+        st.markdown(f"**[Source]({url})**")
     else:
-        st.markdown("**Source:**")
+        st.markdown("**Source**")
         st.text(url)
 
 
