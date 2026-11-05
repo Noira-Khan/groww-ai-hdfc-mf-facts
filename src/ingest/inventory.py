@@ -18,6 +18,7 @@ ALLOWED_DOC_TYPES = {
     "faq",
     "catalogue",
     "education",
+    "groww_page",
 }
 
 ALLOWED_SCHEMES = {"large_cap", "flexi_cap", "elss", "mid_cap", "small_cap", "amc_wide"}
@@ -39,6 +40,7 @@ PUBLISHER_DOMAINS = {
     "HDFC AMC": ("hdfcfund.com",),
     "SEBI": ("sebi.gov.in",),
     "AMFI": ("amfiindia.com",),
+    "Groww": ("groww.in", "groww.com"),
 }
 
 SOURCE_ID_PATTERN = re.compile(r"^[a-z0-9_]{3,64}$")

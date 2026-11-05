@@ -1,13 +1,13 @@
-# Implementation Plan — HDFC MF Facts Assistant
+# Implementation Plan — Groww Fund Facts
 
 | Field | Value |
 |---|---|
-| Product | HDFC MF Facts — facts-only Mutual Fund FAQ assistant |
+| Product | Groww Fund Facts — facts-only Mutual Fund FAQ assistant |
 | Milestone | M4 / GrowChatbot |
-| Version | 2.0 (simplified) |
-| Date | 2026-11-01 |
-| Derived from | `GrowChatbot/Architecture.md` v1.0 |
-| Status | Draft for review |
+| Version | 2.1 |
+| Date | 2026-11-05 |
+| Derived from | `GrowChatbot/Architecture.md` v1.1 |
+| Status | Implemented prototype |
 
 ---
 
@@ -107,7 +107,7 @@ python -m pip install -r requirements.txt
 
 ```yaml
 app:
-  name: "HDFC MF Facts"
+  name: "Groww Fund Facts"
   disclaimer: "Facts-only. No investment advice."
   max_answer_sentences: 3
   artifact_dir: "data/artifacts"
@@ -198,7 +198,7 @@ Rules:
 - `doc_type`: `scheme_page, kim, sid, factsheet, ter, statement_guide, faq, catalogue, education`.
 - `scheme`: `large_cap, flexi_cap, elss, mid_cap, small_cap, amc_wide`.
 - Seed from `HDFC_MF_Five_Scheme_Corpus_Pack_2026-10-20/source_inventory.csv`; resolve catalogue pages to direct PDF links.
-- Groww URLs are for discovery only, never cited.
+- Limited Groww Direct Growth scheme pages are curated (`groww_page`) and preferred for scheme-fact citations; HDFC AMC / SEBI / AMFI remain allowlisted.
 
 ### 3.2 Build `src/ingest/loader.py`
 
@@ -421,7 +421,7 @@ On failure: one repair retry, then return `not_in_sources`.
 
 ### 9.1 Build `ui/index.html`, `ui/app.js`, `ui/styles.css`
 
-- Header: `HDFC MF Facts`.
+- Header: `Groww Fund Facts` (white + `#5367FF`).
 - Persistent note: `Facts-only. No investment advice.`
 - Welcome line: `Hi! Ask me facts about HDFC Mutual Fund schemes.`
 - Three example questions:

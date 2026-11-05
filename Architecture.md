@@ -1,21 +1,21 @@
-# Architecture — HDFC MF Facts Assistant (RAG FAQ Prototype)
+# Architecture — Groww Fund Facts (RAG FAQ Prototype)
 
 | Field | Value |
 |---|---|
-| Product | HDFC MF Facts — facts-only Mutual Fund FAQ assistant |
+| Product | Groww Fund Facts — facts-only Mutual Fund FAQ assistant |
 | Milestone | M4 / GrowChatbot |
-| Version | 1.0 (draft) |
-| Date | 2026-11-01 |
-| Derived from | `GrowChatbot/PRD.md` v1.0 |
-| Status | Draft for review |
+| Version | 1.1 |
+| Date | 2026-11-05 |
+| Derived from | `GrowChatbot/PRD.md` v1.1 |
+| Status | Implemented prototype |
 
 ---
 
 ## 1. Architectural Goals
 
-1. **Official-source grounding.** Every answer is composed only from allowlisted HDFC AMC / SEBI / AMFI text and cites exactly one URL that exists in the retrieved chunk metadata.
-2. **Inspectable RAG.** Each stage writes durable artifacts, so loading, chunking, embedding, storage, retrieval, and generation can be demonstrated independently.
-3. **Config-driven.** Chunking, embedding model, vector store, retrieval thresholds, and LLM provider/model are runtime configuration, not code.
+1. **Curated-source grounding.** Every answer is composed only from allowlisted Groww / HDFC AMC / SEBI / AMFI text and cites exactly one URL that exists in the retrieved chunk metadata. Scheme-fact retrieval prefers `groww_page` so citations open on groww.in.
+2. **Inspectable RAG.** Each stage writes durable artifacts, so loading, chunking, embedding, storage, retrieval, and generation can be demonstrated independently. Answer envelopes may include `pipeline_steps` and ranked `passages`.
+3. **Config-driven.** Chunking, embedding model, vector store, retrieval thresholds, and LLM provider/model are runtime configuration, not code. Default remains Groq + `LLM_MODEL_ID` from `.env`.
 4. **Safety before intelligence.** PII and safety routing execute in plain code before any model call.
 5. **Failure is safe.** Any retrieval, provider, or validation failure degrades to `not_in_sources` or `error`, never to an uncited or invented answer.
 
@@ -42,6 +42,7 @@ flowchart TB
     end
 
     subgraph External
+        GROWW[Groww scheme pages]
         AMC[HDFC AMC pages/PDFs]
         SEBI[SEBI pages/PDFs]
         AMFI[AMFI pages]
@@ -56,6 +57,7 @@ flowchart TB
     API --> VDB
     API --> LLM
     API --> ART
+    PIPE --> GROWW
     PIPE --> AMC
     PIPE --> SEBI
     PIPE --> AMFI
@@ -533,7 +535,7 @@ Commands: `pytest tests/`, `python -m eval.run --suite all`.
 | AD6 | Validator + single repair | Bounds cost and enforces contract | Some answerable questions may fall back |
 | AD7 | Provider-agnostic LLM client | Config switch across Groq/Gemini/OpenAI/Anthropic/Mistral | Lowest-common-denominator API surface |
 | AD8 | Hashed cache only | Avoids storing user questions | No conversational memory |
-| AD9 | Groww used for discovery only | Preserves official-source policy | Scheme mapping must be verified against AMC pages |
+| AD9 | Limited Groww scheme pages curated + preferred for scheme-fact citations | Matches Groww product UX while keeping HDFC AMC/SEBI/AMFI | Do not scrape all of Groww; keep allowlist tight |
 
 ---
 

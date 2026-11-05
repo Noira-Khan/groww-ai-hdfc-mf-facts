@@ -1,34 +1,34 @@
-# PRD — HDFC MF Facts Assistant (RAG FAQ Prototype)
+# PRD — Groww Fund Facts (RAG FAQ Prototype)
 
 | Field | Value |
 |---|---|
-| Product | HDFC MF Facts — facts-only Mutual Fund FAQ assistant |
+| Product | Groww Fund Facts — facts-only Mutual Fund FAQ assistant |
 | Milestone | M4 / GrowChatbot |
-| Version | 1.0 (draft) |
-| Date | 2026-11-01 |
+| Version | 1.1 |
+| Date | 2026-11-05 |
 | Source input | `GrowChatbot/instructiondoc` |
-| Related assets | `HDFC_MF_Five_Scheme_Corpus_Pack_2026-10-20/`, `ChatGPT_Hatchable_HDFC_MF_Facts_Gemini_Free_API_Prompt_Pack.md` |
-| Status | Draft for review |
+| Related assets | `HDFC_MF_Five_Scheme_Corpus_Pack_2026-10-20/`, Groww Direct Growth scheme pages |
+| Status | Implemented prototype |
 
 ---
 
 ## 1. Summary
 
-Build a working RAG prototype that answers factual questions about HDFC Mutual Fund schemes, using only official public sources. Every answer must carry exactly one citation link and a "last updated" date. The assistant must refuse investment-advice, performance-comparison, and personal-data requests.
+Build a working RAG prototype that answers factual questions about HDFC Mutual Fund schemes for the Groww product surface. The curated corpus includes limited Groww.in scheme pages plus official HDFC AMC, SEBI, and AMFI documents. Every answer must carry exactly one citation link and a "last updated" date. The assistant must refuse investment-advice, performance-comparison, and personal-data requests. LLM provider/model remain Groq via `.env` (`GROQ_API_KEY`, `LLM_MODEL_ID`).
 
-The prototype is also a teaching artifact: each RAG stage (loading, chunking, embedding, vector storage, retrieval, generation) must persist its inputs and outputs explicitly so the pipeline can be inspected and demonstrated stage by stage. All stage parameters live in a config file and can be changed without code edits.
+The prototype is also a teaching artifact: each RAG stage (loading, chunking, embedding, vector storage, retrieval, generation) must persist its inputs and outputs explicitly so the pipeline can be inspected and demonstrated stage by stage. Streamlit exposes pipeline steps and ranked passages. All stage parameters live in a config file and can be changed without code edits.
 
 ---
 
 ## 2. Problem and Context
 
-Retail investors and support/content teams repeatedly ask the same factual questions: expense ratio, exit load, minimum SIP, ELSS lock-in, riskometer, benchmark, and statement downloads. Answers are scattered across AMC pages, KIM/SID PDFs, factsheets, and regulator pages. Generic chatbots answer these from memory, which risks stale or fabricated numbers, and they frequently drift into advice.
+Retail investors and support/content teams repeatedly ask the same factual questions: expense ratio, exit load, minimum SIP, ELSS lock-in, riskometer, benchmark, and statement downloads. Answers are scattered across distributor pages, AMC pages, KIM/SID PDFs, factsheets, and regulator pages. Generic chatbots answer these from memory, which risks stale or fabricated numbers, and they frequently drift into advice.
 
-This product constrains the model to a small, curated, official corpus, forces a citation, and explicitly refuses anything that is opinion, recommendation, or performance comparison.
+This product constrains the model to a small, curated corpus, prefers Groww scheme-page citations for scheme facts so users can spot answers on groww.in, still backs the corpus with HDFC AMC / SEBI / AMFI, forces a citation, and explicitly refuses anything that is opinion, recommendation, or performance comparison.
 
-### 2.1 Source-material conflict to resolve
+### 2.1 Curated Groww pages (resolved)
 
-The instruction document lists **Groww** pages to scrape. Groww is a distributor/aggregator, not an official source, and the stated constraints and the existing corpus pack require **official public pages only** (HDFC AMC, SEBI, AMFI). The PRD therefore treats Groww URLs as **discovery aids only** (scheme naming and mapping) and cites only HDFC AMC / SEBI / AMFI pages. See Open Question O1.
+Limited Groww.in Direct Growth scheme pages are first-class curated sources (`doc_type: groww_page`, publisher `Groww`, hosts `groww.in` / `groww.com`). They sit alongside HDFC AMC, SEBI, and AMFI. The product does **not** scrape all of Groww; only the four scheme pages listed in `sources.csv`.
 
 ---
 
@@ -75,9 +75,9 @@ The instruction document lists **Groww** pages to scrape. Groww is a distributor
 
 | # | Source | Instruction URL | Use |
 |---|---|---|---|
-| 1 | HDFC Mutual Fund AMC overview | `https://groww.in/mutual-funds/amc/hdfc-mutual-funds` | Discovery only; cite HDFC AMC equivalent |
-| 2 | HDFC Large Cap Fund Direct Growth | `https://groww.in/mutual-funds/hdfc-large-cap-fund-direct-growth` | Discovery only; cite HDFC AMC scheme page/KIM/SID/factsheet |
-| 3 | HDFC Flexi Cap Direct Plan Growth | `https://groww.in/mutual-funds/hdfc-equity-fund-direct-growth` | Discovery only; cite HDFC AMC scheme page/KIM/SID/factsheet |
+| 1 | HDFC Mutual Fund AMC overview | `https://groww.in/mutual-funds/amc/hdfc-mutual-funds` | Discovery aid; corpus cites scheme pages + AMC/regulator docs |
+| 2 | HDFC Large Cap Fund Direct Growth | `https://groww.in/mutual-funds/hdfc-large-cap-fund-direct-growth` | Curated Groww page + HDFC AMC scheme page/KIM/SID/factsheet |
+| 3 | HDFC Flexi Cap Direct Plan Growth | `https://groww.in/mutual-funds/hdfc-equity-fund-direct-growth` | Curated Groww page + HDFC AMC scheme page/KIM/SID/factsheet |
 | 4 | HDFC ELSS Tax Saver Fund Direct Plan Growth | `https://groww.in/mutual-funds/hdfc-elss-tax-saver-fund-direct-plan-growth` | Discovery only; cite HDFC AMC scheme page/KIM/SID/factsheet |
 | 5 | HDFC Mid Cap Fund Direct Growth | `https://groww.in/mutual-funds/hdfc-mid-cap-fund-direct-growth` | Discovery only; cite HDFC AMC scheme page/KIM/SID/factsheet |
 
@@ -105,7 +105,7 @@ Expense ratio / TER, exit load, minimum SIP, minimum lump sum, ELSS 3-year lock-
 
 ### 7.1 UI (single page)
 
-- Header: `HDFC MF Facts`.
+- Header: `Groww Fund Facts` (light white + `#5367FF` blue).
 - Persistent note: `Facts-only. No investment advice.`
 - Welcome line: `Hi! Ask me facts about HDFC Mutual Fund schemes.`
 - Three tappable example questions:
@@ -265,7 +265,7 @@ All parameters below must be changeable without code edits.
 
 ```yaml
 app:
-  name: "HDFC MF Facts"
+  name: "Groww Fund Facts"
   disclaimer: "Facts-only. No investment advice. Answers are drawn from official HDFC AMC, SEBI and AMFI pages."
   max_answer_sentences: 3
   artifact_dir: "data/artifacts"
@@ -456,7 +456,7 @@ Reference stack: Python 3.11, FastAPI, ChromaDB, sentence-transformers, provider
 
 | ID | Risk / question | Proposed default | Owner decision |
 |---|---|---|---|
-| O1 | Groww URLs conflict with "official sources only" | Use HDFC AMC/SEBI/AMFI for citation; Groww for discovery only | Pending |
+| O1 | Groww URLs vs official-only policy | Curate limited Groww scheme pages + HDFC AMC/SEBI/AMFI; prefer Groww citations for scheme facts | Resolved |
 | O2 | Instruction lists 4 schemes; corpus pack has 5 (adds Small Cap) | Include Small Cap only if rating/scope allows; else exclude explicitly | Pending |
 | O3 | Groq model string `qwen/qwen3.8-27b` is not a verified current Groq model ID | Read `LLM_MODEL_ID` from `.env`; validate at startup; document the exact ID used | Pending |
 | O4 | "AI chunking agent can decide strategy" — is an LLM call allowed during ingestion? | Rule-based structural planner with recorded rationale; optional LLM planner behind config flag | Pending |

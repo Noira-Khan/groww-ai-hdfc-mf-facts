@@ -1,17 +1,20 @@
-# HDFC MF Facts
+# Groww Fund Facts
 
-A facts-only assistant for a small, curated set of HDFC Mutual Fund schemes. It answers from official HDFC AMC, SEBI, and AMFI sources, cites exactly one allowlisted link, shows the source date, and refuses investment advice, performance comparisons, personal data, and out-of-corpus questions.
+A facts-only assistant for a small, curated set of HDFC Mutual Fund schemes, branded for Groww. It answers from curated Groww scheme pages plus official HDFC AMC, SEBI, and AMFI sources, cites exactly one allowlisted link, shows the source date, and refuses investment advice, performance comparisons, personal data, and out-of-corpus questions.
 
 > Facts-only. No investment advice.
+
+LLM provider and model stay in `.env` / Streamlit secrets (`GROQ_API_KEY`, `LLM_MODEL_ID`). Do not commit secrets.
 
 ## What it does
 
 - Answers factual questions about HDFC Large Cap Fund, HDFC Flexi Cap Fund, HDFC ELSS Tax Saver, and HDFC Mid Cap Fund.
 - Covers facts such as exit load, lock-in, minimum SIP, expense ratio, riskometer, benchmark, and account-statement requests.
-- Returns answers with a single official source URL, the source `as_on_date`, and a verbatim proof passage.
+- Prefers Groww Direct Growth scheme pages for scheme-fact citations so links open on groww.in for quick spotting.
+- Returns answers with a single allowlisted source URL, the source `as_on_date`, a verbatim proof passage, and expandable pipeline/passages transparency in Streamlit.
 - Routes advice, performance, PII, injection, ambiguous, and out-of-corpus questions to fixed safe responses.
 - Keeps answers to at most three sentences and validates every number against retrieved context.
-- Serves a one-page UI and a JSON API.
+- Serves a one-page Streamlit UI and a JSON API.
 
 ## What it does not do
 
@@ -23,7 +26,7 @@ A facts-only assistant for a small, curated set of HDFC Mutual Fund schemes. It 
 ## Architecture
 
 ```
-streamlit_app.py    Streamlit frontend
+streamlit_app.py    Streamlit frontend (Groww white + blue)
 ui/                 One-page chat UI (FastAPI)
 src/api/main.py     FastAPI app and guard order
 src/services/       Shared question processing and knowledge-base init
@@ -32,7 +35,7 @@ src/rag/            Retrieval, prompt generation, validation, cache, pipeline
 src/ingest/         Source loading, normalization, chunking, embeddings, Chroma index
 eval/               Gold questions and retrieval/QA/safety runner
 tests/              Unit and API tests
-sources.csv         Curated official source inventory
+sources.csv         Curated source inventory (Groww + HDFC AMC + SEBI + AMFI)
 data/artifacts/     Generated corpus, Chroma index, and cache (gitignored)
 data/eval/          Generated evaluation results
 ```
@@ -51,7 +54,7 @@ python -m pip install -r requirements-dev.txt
 
 Use `requirements.txt` for deployment and `requirements-dev.txt` when you also need `pytest`.
 
-Create a `.env` file in the project root:
+Create a `.env` file in the project root (keep your existing key and model):
 
 ```dotenv
 LLM_MODEL_ID=openai/gpt-oss-120b
@@ -62,7 +65,7 @@ The provider defaults to `groq` in `config.yaml`. To use another supported provi
 
 ## Build the corpus
 
-The generated corpus and index live under `data/artifacts/` and are not committed. Build them before the first run:
+The generated corpus and index live under `data/artifacts/` and are not committed. Build them before the first run (required after adding Groww sources):
 
 ```powershell
 python -m src.ingest --stage all
@@ -96,7 +99,9 @@ The Streamlit app reuses the same safety, retrieval, generation, validation, and
 streamlit run streamlit_app.py
 ```
 
-The app shell renders immediately. Configuration is loaded quickly, and the embedding model and knowledge base are initialized only when needed. If the corpus or index is missing, the page shows an **Initialize knowledge base** panel with stage-by-stage progress (model, download X/19, normalize, chunk, embed, index, validate). The model and initialized resources are cached for the server process, and later reruns do not rebuild a valid Chroma index.
+The app shell renders immediately. Configuration is loaded quickly, and the embedding model and knowledge base are initialized only when needed. If the corpus or index is missing, the page shows an **Initialize knowledge base** panel with stage-by-stage progress (model, download, normalize, chunk, embed, index, validate). The model and initialized resources are cached for the server process, and later reruns do not rebuild a valid Chroma index.
+
+Answer cards show a type badge, source link (Groww preferred for scheme facts), last-updated date, collapsible proof, and an expandable **How this answer was found** panel with pipeline steps and ranked passages.
 
 ### Deploy to Streamlit Community Cloud
 
@@ -104,7 +109,7 @@ The app shell renders immediately. Configuration is loaded quickly, and the embe
 2. In [share.streamlit.io](https://share.streamlit.io), create an app from the repo.
 3. Set **Main file path** to `streamlit_app.py`.
 4. In **Advanced settings**, select **Python 3.13**.
-5. Add secrets in the app dashboard:
+5. Add secrets in the app dashboard (same values as local `.env`):
 
 ```toml
 GROQ_API_KEY = "your_groq_key_here"
@@ -113,7 +118,7 @@ LLM_MODEL_ID = "openai/gpt-oss-120b"
 # HF_TOKEN = "optional-hugging-face-token"
 ```
 
-6. Deploy, then open the app and click **Initialize knowledge base** on first run.
+6. Deploy, then open the app and click **Initialize knowledge base** on first run (rebuild after Groww sources land).
 
 Do not commit `.streamlit/secrets.toml`; use `.streamlit/secrets.toml.example` as the template. Locally, `.env` continues to work.
 
@@ -122,7 +127,7 @@ Streamlit Community Cloud notes:
 - Select **Python 3.13** in **Advanced settings**. `runtime.txt` is not used by Community Cloud for Python version selection. The pinned dependency set is tested on Python 3.13.0.
 - After changing the Python version or `requirements.txt`, use **Manage app → Reboot** (or clear the app cache) so Community Cloud reinstalls the environment.
 - `packages.txt` installs `libxml2-dev` and `libxslt1-dev` for HTML ingestion.
-- `data/artifacts/` is generated and is not committed, so the first cold start downloads official documents and the embedding model. This can take several minutes and needs outbound network access. The UI reports each initialization stage.
+- `data/artifacts/` is generated and is not committed, so the first cold start downloads curated documents and the embedding model. This can take several minutes and needs outbound network access. The UI reports each initialization stage.
 - The filesystem is ephemeral; a restarted or redeployed app rebuilds the corpus and index. Use a persistent external vector store if that cost matters.
 - `requirements.txt` requests the CPU-only PyTorch wheel (`torch==2.15.0+cpu`) from the PyTorch CPU index. This avoids downloading the large NVIDIA CUDA packages on Community Cloud's Linux runtime. The corpus uses `device: cpu` in `config.yaml`.
 - The runtime image must have enough memory for `sentence-transformers`, PyTorch, and ChromaDB.
@@ -185,8 +190,6 @@ Pass criteria:
 - Zero ungrounded numbers.
 - Zero PII leaks in responses, traces, cache keys, or artifacts.
 
-The latest full run passed all three suites: retrieval recall@5 `1.0`, QA factual accuracy `0.9091`, citation precision `1.0`, safety routing `1.0`, and zero PII leaks.
-
 ## Tests
 
 ```powershell
@@ -201,9 +204,10 @@ Key settings in `config.yaml`:
 
 - `retrieval.top_k` and `retrieval.score_threshold` control candidate recall.
 - `retrieval.max_context_chunks` limits context passed to the model.
-- `llm.provider`, `llm.model`, temperature, and timeout control generation.
+- `llm.provider`, `llm.model`, temperature, and timeout control generation (defaults: Groq + `LLM_MODEL_ID` from `.env`).
 - `safety.detect_pii`, `safety.max_repair_retries`, and `safety.cache_answers` control guardrails.
 - `app.max_answer_sentences` is enforced by validation.
+- `ingestion.allowlist_publishers` includes Groww, HDFC AMC, SEBI, and AMFI.
 
 `llm.model` is read from `LLM_MODEL_ID` in `.env`.
 
@@ -219,4 +223,4 @@ Key settings in `config.yaml`:
 
 ## Disclaimer
 
-This is a prototype for factual information only. It is not investment, tax, or legal advice. Always verify details in the latest official scheme documents before acting.
+This is a prototype for factual information only. It is not investment, tax, or legal advice. Always verify details in the latest scheme documents before acting.

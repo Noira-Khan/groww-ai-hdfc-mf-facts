@@ -23,7 +23,7 @@ def config():
 
 
 def test_loads_all_sections(config):
-    assert config.app.name == "HDFC MF Facts"
+    assert config.app.name == "Groww Fund Facts"
     assert config.embedding.model == "sentence-transformers/all-MiniLM-L6-v2"
     assert config.vector_store.provider == "chroma"
     assert config.retrieval.max_context_chunks <= config.retrieval.top_k

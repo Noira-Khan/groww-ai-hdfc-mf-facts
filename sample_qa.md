@@ -1,6 +1,6 @@
 # Sample Q&A
 
-Examples from the curated corpus. Factual answers include one official link and a verbatim proof passage. Guardrail responses use fixed text and never echo personal data.
+Examples from the curated corpus. Scheme-fact answers prefer a Groww Direct Growth page citation plus a verbatim proof passage. Guardrail responses use fixed text and never echo personal data. Numbers may refresh when sources update—rebuild the KB after changing `sources.csv`.
 
 ## Factual answers
 
@@ -12,9 +12,9 @@ Examples from the curated corpus. Factual answers include one official link and 
 
 **A:** The exit load is 1.00% if units are redeemed or switched out within 1 year from the date of allotment, and no exit load is payable after 1 year.
 
-**Source:** https://www.hdfcfund.com/explore/mutual-funds/hdfc-flexi-cap-fund/regular
+**Source:** https://groww.in/mutual-funds/hdfc-equity-fund-direct-growth
 
-**Proof:** In respect of each purchase / switch-in of Units, an Exit Load of 1.00% is payable if Units are redeemed / switched-out within 1 year from the date of allotment. No Exit Load is payable if Units are redeemed / switched-out after 1 year from the date of allotment.
+**Proof:** Exit load of 1% if redeemed within 1 year
 
 ### 2. Lock-in period
 
@@ -24,7 +24,7 @@ Examples from the curated corpus. Factual answers include one official link and 
 
 **A:** The lock-in period is 3 years.
 
-**Source:** https://www.hdfcfund.com/explore/mutual-funds/hdfc-elss-tax-saver-fund/direct
+**Source:** https://groww.in/mutual-funds/hdfc-elss-tax-saver-fund-direct-plan-growth
 
 **Proof:** Lock-in: 3 years
 
@@ -36,9 +36,9 @@ Examples from the curated corpus. Factual answers include one official link and 
 
 **A:** The minimum SIP for HDFC Large Cap Fund is ₹ 100.
 
-**Source:** https://www.hdfcfund.com/explore/mutual-funds/hdfc-large-cap-fund/regular
+**Source:** https://groww.in/mutual-funds/hdfc-large-cap-fund-direct-growth
 
-**Proof:** Minimum SIP: ₹ 100
+**Proof:** Min. SIP Amount: ₹100
 
 ### 4. Expense ratio
 
@@ -46,11 +46,11 @@ Examples from the curated corpus. Factual answers include one official link and 
 
 **Type:** `answer`
 
-**A:** The Total Expense Ratio (TER) of HDFC Mid Cap Fund is 1.31%.
+**A:** The Total Expense Ratio (TER) of HDFC Mid Cap Fund is shown on the Groww scheme page (value refreshes with the source).
 
-**Source:** https://www.hdfcfund.com/explore/mutual-funds/hdfc-mid-cap-fund/regular
+**Source:** https://groww.in/mutual-funds/hdfc-mid-cap-fund-direct-growth
 
-**Proof:** Total Expense Ratio (TER): 1.31%
+**Proof:** Expense ratio value from the Groww fund facts panel
 
 ### 5. Benchmark
 
@@ -60,9 +60,9 @@ Examples from the curated corpus. Factual answers include one official link and 
 
 **A:** The benchmark is the Nifty Midcap 150 Index TRI.
 
-**Source:** https://www.hdfcfund.com/explore/mutual-funds/hdfc-mid-cap-fund/regular
+**Source:** https://groww.in/mutual-funds/hdfc-mid-cap-fund-direct-growth
 
-**Proof:** Nifty Midcap 150 Index TRI
+**Proof:** Nifty Midcap 150 TRI
 
 ### 6. Riskometer
 
@@ -72,7 +72,7 @@ Examples from the curated corpus. Factual answers include one official link and 
 
 **A:** The riskometer of HDFC Large Cap Fund is Very High.
 
-**Source:** https://www.hdfcfund.com/explore/mutual-funds/hdfc-large-cap-fund/regular
+**Source:** https://groww.in/mutual-funds/hdfc-large-cap-fund-direct-growth
 
 **Proof:** Riskometer: Very High
 
@@ -98,9 +98,9 @@ Examples from the curated corpus. Factual answers include one official link and 
 
 **A:** The exit load is 1.00% if units are redeemed or switched out within 1 year from the date of allotment, and no exit load after 1 year.
 
-**Source:** https://www.hdfcfund.com/explore/mutual-funds/hdfc-flexi-cap-fund/regular
+**Source:** https://groww.in/mutual-funds/hdfc-equity-fund-direct-growth
 
-**Proof:** In respect of each purchase / switch-in of Units, an Exit Load of 1.00% is payable if Units are redeemed / switched-out within 1 year from the date of allotment. No Exit Load is payable if Units are redeemed / switched-out after 1 year from the date of allotment.
+**Proof:** Exit load of 1% if redeemed within 1 year
 
 **Follow-up chip:** What about HDFC Mid Cap Fund?
 
@@ -150,7 +150,7 @@ The question is not echoed, sent to the model, logged, or cached.
 
 **Type:** `not_in_sources`
 
-**A:** That fact is not covered by my curated official sources.
+**A:** That fact is not covered by my curated sources.
 
 **Source:** https://www.hdfcfund.com/mutual-funds/fund-documents/kim
 
@@ -172,7 +172,7 @@ The question is not echoed, sent to the model, logged, or cached.
 
 **Type:** `not_in_sources`
 
-**A:** That fact is not covered by my curated official sources.
+**A:** That fact is not covered by my curated sources.
 
 **Source:** https://www.hdfcfund.com/mutual-funds/fund-documents/kim
 

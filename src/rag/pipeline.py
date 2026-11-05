@@ -22,6 +22,80 @@ SCHEME_DOCUMENTS_URL = (
 )
 
 
+def _passage_excerpt(text: str, limit: int = 220) -> str:
+    cleaned = re.sub(r"\s+", " ", (text or "")).strip()
+    if len(cleaned) <= limit:
+        return cleaned
+    return cleaned[: limit - 1].rstrip() + "…"
+
+
+def _ranked_passages(retrieval: RetrievalResult) -> list[dict[str, Any]]:
+    passages: list[dict[str, Any]] = []
+    for index, chunk in enumerate(retrieval.chunks, start=1):
+        passages.append(
+            {
+                "rank": index,
+                "score": round(float(chunk.score), 4),
+                "source_id": chunk.metadata.get("source_id"),
+                "publisher": chunk.metadata.get("publisher"),
+                "doc_type": chunk.metadata.get("doc_type"),
+                "url": chunk.url,
+                "section": chunk.section,
+                "excerpt": _passage_excerpt(chunk.text),
+            }
+        )
+    return passages
+
+
+def _pipeline_steps(
+    *,
+    intent_route: str,
+    retrieval: RetrievalResult,
+    model_id: str,
+    validation_ok: bool,
+    validation_note: str,
+) -> list[dict[str, Any]]:
+    detected = retrieval.debug.get("detected_topic")
+    return [
+        {
+            "step": 1,
+            "title": "Checked for personal details",
+            "status": "passed",
+            "detail": "No PAN, Aadhaar, phone, email, OTP or account numbers found.",
+        },
+        {
+            "step": 2,
+            "title": "Classified the question",
+            "status": "done",
+            "detail": (
+                f"Route `{intent_route}`"
+                + (f", topic `{detected}`." if detected else ".")
+            ),
+        },
+        {
+            "step": 3,
+            "title": "Searched the curated sources",
+            "status": "top_k",
+            "detail": (
+                f"Selected {len(retrieval.chunks)} passages from Groww, "
+                "HDFC AMC, SEBI and AMFI."
+            ),
+        },
+        {
+            "step": 4,
+            "title": "Wrote the answer from those passages only",
+            "status": "grounded",
+            "detail": f"Model: {model_id or 'configured LLM'}. No outside knowledge allowed.",
+        },
+        {
+            "step": 5,
+            "title": "Checked the answer",
+            "status": "passed" if validation_ok else "failed",
+            "detail": validation_note,
+        },
+    ]
+
+
 # ---------------------------------------------------------
 # Question focus
 # ---------------------------------------------------------
@@ -421,6 +495,19 @@ def answer_question(
         ],
 
         "request_id": request_id,
+
+        "pipeline_steps": _pipeline_steps(
+            intent_route=intent.route,
+            retrieval=retrieval,
+            model_id=config.llm.model,
+            validation_ok=True,
+            validation_note=(
+                "One cited source, three sentences or fewer, "
+                "every figure found in the passages."
+            ),
+        ),
+
+        "passages": _ranked_passages(retrieval),
 
     }
 

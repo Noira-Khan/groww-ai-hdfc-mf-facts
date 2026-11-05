@@ -138,7 +138,7 @@ def test_rejects_non_allowlisted_or_unretrieved_url(config):
 
 def test_rejects_non_allowlisted_publisher(config):
     result = validate_candidate(
-        config, _candidate(), [_chunk(publisher="Groww")], "exit load"
+        config, _candidate(), [_chunk(publisher="Moneycontrol")], "exit load"
     )
     assert "publisher_not_allowlisted" in {issue.code for issue in result.issues}
 
@@ -267,5 +267,5 @@ def test_allowlisted_hosts():
     assert is_allowlisted_url("https://files.hdfcfund.com/x")
     assert is_allowlisted_url("https://investor.sebi.gov.in/x")
     assert is_allowlisted_url("https://www.amfiindia.com/x")
-    assert not is_allowlisted_url("https://groww.in/x")
+    assert is_allowlisted_url("https://groww.in/mutual-funds/hdfc-large-cap-fund-direct-growth")
     assert not is_allowlisted_url("javascript:alert(1)")

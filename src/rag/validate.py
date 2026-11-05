@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 from src.config import Config
 from src.rag.retrieve import RetrievedChunk
 
-ALLOWED_URL_HOSTS = ("hdfcfund.com", "sebi.gov.in", "amfiindia.com")
+ALLOWED_URL_HOSTS = ("hdfcfund.com", "sebi.gov.in", "amfiindia.com", "groww.in", "groww.com")
 
 URL_RE = re.compile(r"https?://[^\s<>\"'`]+", re.IGNORECASE)
 TRAILING_URL_CHARS = ".,;:!?)]}"

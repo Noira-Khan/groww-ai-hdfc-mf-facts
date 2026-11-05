@@ -1,4 +1,8 @@
 source_id,url,publisher,doc_type,scheme,title,expected_topics
+groww_large_cap_page,https://groww.in/mutual-funds/hdfc-large-cap-fund-direct-growth,Groww,groww_page,large_cap,Groww HDFC Large Cap Fund Direct Growth,expense_ratio|exit_load|min_sip|riskometer|benchmark
+groww_flexi_cap_page,https://groww.in/mutual-funds/hdfc-equity-fund-direct-growth,Groww,groww_page,flexi_cap,Groww HDFC Flexi Cap Fund Direct Growth,expense_ratio|exit_load|min_sip|riskometer|benchmark
+groww_mid_cap_page,https://groww.in/mutual-funds/hdfc-mid-cap-fund-direct-growth,Groww,groww_page,mid_cap,Groww HDFC Mid Cap Fund Direct Growth,expense_ratio|exit_load|min_sip|riskometer|benchmark
+groww_elss_page,https://groww.in/mutual-funds/hdfc-elss-tax-saver-fund-direct-plan-growth,Groww,groww_page,elss,Groww HDFC ELSS Tax Saver Fund Direct Growth,elss_lockin|expense_ratio|exit_load|min_sip|riskometer
 hdfc_large_cap_page,https://www.hdfcfund.com/explore/mutual-funds/hdfc-large-cap-fund/regular,HDFC AMC,scheme_page,large_cap,HDFC Large Cap Fund scheme page,expense_ratio|exit_load|min_sip|riskometer|benchmark
 hdfc_flexi_cap_page,https://www.hdfcfund.com/explore/mutual-funds/hdfc-flexi-cap-fund/regular,HDFC AMC,scheme_page,flexi_cap,HDFC Flexi Cap Fund scheme page,expense_ratio|exit_load|min_sip|riskometer|benchmark
 hdfc_elss_page,https://www.hdfcfund.com/explore/mutual-funds/hdfc-elss-tax-saver-fund/direct,HDFC AMC,scheme_page,elss,HDFC ELSS Tax Saver Fund scheme page,elss_lockin|expense_ratio|exit_load|min_sip

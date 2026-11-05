@@ -74,7 +74,7 @@ def test_health_reports_collection_and_config(client, monkeypatch):
     assert payload["status"] == "ok"
     assert payload["collection_count"] == 1282
     assert payload["corpus_version"] == "abc123"
-    assert payload["app_name"] == "HDFC MF Facts"
+    assert payload["app_name"] == "Groww Fund Facts"
     assert payload["disclaimer"] == "Facts-only. No investment advice."
     assert payload["config_hash"]
     assert "GROQ_API_KEY" not in json.dumps(payload)

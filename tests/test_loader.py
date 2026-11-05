@@ -132,8 +132,11 @@ def test_load_inventory_requires_columns(tmp_path):
 def test_shipped_inventory_is_valid(config):
     specs = load_inventory(CONFIG_PATH.parent / "sources.csv")
     validate_inventory(specs, config.ingestion.allowlist_publishers)
-    assert 15 <= len(specs) <= 25
-    assert all(spec.publisher in {"HDFC AMC", "SEBI", "AMFI"} for spec in specs)
+    assert 15 <= len(specs) <= 30
+    assert all(
+        spec.publisher in {"HDFC AMC", "SEBI", "AMFI", "Groww"} for spec in specs
+    )
+    assert any(spec.doc_type == "groww_page" for spec in specs)
 
 
 def test_validate_rejects_host_mismatch(config):

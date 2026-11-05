@@ -15,19 +15,20 @@ from src.rag.topics import detect_topic, text_matches_topic
 from src.safety.intent import SUPPORTED_SCHEMES
 from src.store.chroma import get_collection
 
-PREFERRED_DOC_TYPES = {"kim", "sid", "factsheet", "scheme_page"}
+PREFERRED_DOC_TYPES = {"kim", "sid", "factsheet", "scheme_page", "groww_page"}
 LOWER_PRIORITY_DOC_TYPES = {"catalogue", "faq", "education"}
 AMC_WIDE_SCHEMES = frozenset({"", "amc_wide", "all", "general", "none"})
+GROWW_SCHEME_FACT_DOCS = {"groww_page", "scheme_page", "kim", "factsheet"}
 TOPIC_PREFERRED_DOC_TYPES: dict[str, set[str]] = {
     "statements": {"statement_guide", "faq"},
     "capital_gains": {"statement_guide", "faq"},
-    "definitions": {"faq", "education", "scheme_page"},
-    "riskometer": {"scheme_page", "kim", "factsheet"},
-    "benchmark": {"scheme_page", "kim", "factsheet"},
-    "expense_ratio": {"scheme_page", "kim", "factsheet"},
-    "exit_load": {"scheme_page", "kim", "sid"},
-    "min_sip": {"scheme_page", "kim", "factsheet"},
-    "elss_lockin": {"scheme_page", "kim", "sid"},
+    "definitions": {"faq", "education", "scheme_page", "groww_page"},
+    "riskometer": set(GROWW_SCHEME_FACT_DOCS),
+    "benchmark": set(GROWW_SCHEME_FACT_DOCS),
+    "expense_ratio": set(GROWW_SCHEME_FACT_DOCS),
+    "exit_load": {"groww_page", "scheme_page", "kim", "sid"},
+    "min_sip": set(GROWW_SCHEME_FACT_DOCS),
+    "elss_lockin": {"groww_page", "scheme_page", "kim", "sid"},
 }
 TOPIC_VALUE_PATTERNS: dict[str, re.Pattern[str]] = {
     "riskometer": re.compile(
@@ -213,7 +214,11 @@ def _topic_doc_boost(chunk: RetrievedChunk, detected_topic: str | None) -> float
     preferred = TOPIC_PREFERRED_DOC_TYPES.get(detected_topic)
     if not preferred:
         return 0.0
-    if chunk.metadata.get("doc_type") in preferred:
+    doc_type = chunk.metadata.get("doc_type")
+    if doc_type == "groww_page" and doc_type in preferred:
+        # Prefer Groww scheme pages so citations open in Groww.
+        return TOPIC_DOC_BOOST + 0.08
+    if doc_type in preferred:
         return TOPIC_DOC_BOOST
     return 0.0
 

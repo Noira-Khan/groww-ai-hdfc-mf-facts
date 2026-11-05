@@ -1,11 +1,12 @@
-"""Streamlit frontend for the HDFC MF Facts assistant.
+"""Streamlit frontend for Groww Fund Facts.
 
 The app shell renders immediately. Configuration is loaded quickly, while the
 embedding model and knowledge base are initialized only when needed, with
 visible stage-level progress. Suggested questions prefill the editable composer.
 
 Answer generation uses ``src.services.chat.process_question``, so safety
-controls and validation match the FastAPI app.
+controls and validation match the FastAPI app. LLM settings stay in ``.env``
+(Groq provider and model unchanged).
 
 Deploy notes (Streamlit Community Cloud):
 - Main file: ``streamlit_app.py``
@@ -26,8 +27,8 @@ from typing import Any
 import streamlit as st
 
 st.set_page_config(
-    page_title="HDFC MF Facts",
-    page_icon="🌱",
+    page_title="Groww Fund Facts",
+    page_icon="💹",
     layout="centered",
     initial_sidebar_state="collapsed",
 )
@@ -51,29 +52,29 @@ SECRET_ENV_KEYS = (
     "HF_TOKEN",
 )
 TYPE_LABELS = {
-    "answer": "ANSWER FROM OFFICIAL SOURCES",
-    "refusal_advice": "FACTS-ONLY ASSISTANT",
-    "refusal_performance": "FACTS-ONLY ASSISTANT",
-    "not_in_sources": "OUTSIDE CURATED SOURCES",
-    "clarify": "SPECIFY A SCHEME",
-    "pii": "PRIVACY PROTECTION",
-    "error": "SOMETHING WENT WRONG",
+    "answer": "Answered from sources",
+    "refusal_advice": "Facts-only assistant",
+    "refusal_performance": "Facts-only assistant",
+    "not_in_sources": "Outside curated sources",
+    "clarify": "Specify a scheme",
+    "pii": "Privacy protection",
+    "error": "Something went wrong",
 }
 TYPE_TAGS = {
     "refusal_advice": "No advice or recommendations.",
     "refusal_performance": "No return or performance views.",
-    "not_in_sources": "Only curated official documents are used.",
+    "not_in_sources": "Only curated Groww, HDFC AMC, SEBI, and AMFI pages are used.",
     "clarify": "Scheme context is required for this fact.",
     "pii": "Personal data is not shown, logged, or stored.",
     "error": "No unverified answer is shown.",
 }
 DISCLAIMER = (
-    "This assistant shares factual information from official HDFC AMC, SEBI, and "
-    "AMFI sources only. It does not provide investment advice, recommendations, "
-    "or performance comparisons. Mutual fund investments are subject to market "
-    "risks; read all scheme-related documents carefully."
+    "Facts-only. No investment advice. Answers cite one curated source "
+    "(Groww scheme pages, HDFC AMC, SEBI, or AMFI). Mutual fund investments "
+    "are subject to market risks; read all scheme-related documents carefully."
 )
 GITHUB_URL = "https://github.com/Noira-Khan/groww-ai-hdfc-mf-facts"
+GROWW_BLUE = "#5367FF"
 logger = get_logger("streamlit")
 
 
@@ -160,18 +161,61 @@ def get_suggested_questions() -> tuple[str, ...]:
 def _source_link(url: str, name: str | None) -> None:
     from src.rag.validate import is_allowlisted_url
 
-    label = name or "Official source"
+    label = name or "Source"
+    host = "groww.in" if "groww.in" in url else (name or "source")
     if is_allowlisted_url(url):
-        st.markdown(f"**Official source:** [{label}]({url})")
+        st.markdown(f"**Source:** [{label}]({url})  \n`{host}`")
     else:
-        st.markdown("**Official source:**")
+        st.markdown("**Source:**")
         st.text(url)
+
+
+def _render_pipeline(envelope: dict[str, Any]) -> None:
+    steps = envelope.get("pipeline_steps")
+    passages = envelope.get("passages")
+    if not isinstance(steps, list) and not isinstance(passages, list):
+        return
+    step_count = len(steps) if isinstance(steps, list) else 0
+    passage_count = len(passages) if isinstance(passages, list) else 0
+    label = f"How this answer was found · {step_count} steps, {passage_count} passages"
+    with st.expander(label, expanded=False):
+        if isinstance(steps, list):
+            st.markdown("**Pipeline**")
+            for step in steps:
+                if not isinstance(step, dict):
+                    continue
+                title = step.get("title") or f"Step {step.get('step')}"
+                status = step.get("status") or ""
+                detail = step.get("detail") or ""
+                st.markdown(f"{step.get('step', '')}. **{title}** · `{status}`")
+                if detail:
+                    st.caption(detail)
+        if isinstance(passages, list) and passages:
+            st.markdown("**Retrieved passages, ranked by similarity**")
+            for item in passages:
+                if not isinstance(item, dict):
+                    continue
+                rank = item.get("rank")
+                score = item.get("score")
+                excerpt = item.get("excerpt") or ""
+                url = item.get("url") or ""
+                publisher = item.get("publisher") or ""
+                st.markdown(
+                    f"**P{rank}** · score `{score}` · {publisher}  \n"
+                    f"{excerpt}"
+                )
+                if url:
+                    st.caption(url)
 
 
 def _render_answer_body(envelope: dict[str, Any]) -> None:
     response_type = str(envelope.get("type") or "error")
     answer = str(envelope.get("answer") or "")
-    st.caption(TYPE_LABELS.get(response_type, "RESPONSE"))
+    badge = TYPE_LABELS.get(response_type, "Response")
+    st.markdown(
+        f'<div class="gf-badge gf-badge-{response_type}">{badge}</div>',
+        unsafe_allow_html=True,
+    )
     if response_type == "answer":
         st.markdown(answer)
     elif response_type == "clarify":
@@ -187,11 +231,12 @@ def _render_answer_body(envelope: dict[str, Any]) -> None:
     if isinstance(source_url, str) and source_url.strip():
         _source_link(source_url.strip(), envelope.get("source_name"))
     source_date = envelope.get("as_on_date") or envelope.get("retrieved_at")
-    st.caption(f"Source date: {source_date or 'Not provided'}")
+    st.caption(f"Last updated from sources: {source_date or 'Not provided'}")
     proof = envelope.get("proof")
     if isinstance(proof, str) and proof.strip():
-        st.markdown("**Verbatim proof passage**")
-        st.code(proof, language=None)
+        with st.expander("Verbatim proof passage", expanded=False):
+            st.code(proof, language=None)
+    _render_pipeline(envelope)
 
 
 def _queue_followup(question: str) -> None:
@@ -274,7 +319,8 @@ def _render_config_error(runtime: Runtime) -> None:
 def _render_setup(config: Config) -> None:
     st.warning(
         "The official knowledge base has not been built in this deployment yet. "
-        "It is created once from the curated HDFC AMC, SEBI, and AMFI sources."
+        "It is created once from curated Groww scheme pages plus HDFC AMC, SEBI, "
+        "and AMFI sources."
     )
     st.markdown(
         "**What happens when you initialize:**\n"
@@ -356,7 +402,7 @@ def _render_chat_input(runtime: Runtime) -> None:
             question = st.text_input(
                 "Question",
                 key="question_input",
-                placeholder="Ask HDFC MF Facts a question...",
+                placeholder="Ask Groww Fund Facts a question...",
                 label_visibility="collapsed",
                 max_chars=2000,
             )
@@ -446,52 +492,60 @@ def _render_chat_input(runtime: Runtime) -> None:
 
 
 def _inject_ui_styles() -> None:
-    """Apply the visual system used by the HDFC MF Facts reference layout."""
+    """Apply Groww Fund Facts light white + blue visual system."""
     st.markdown(
         dedent(
-            """
+            f"""
         <style>
-        [data-testid="stAppViewContainer"] {
-            background: #ffffff;
-        }
-        [data-testid="stHeader"] {
-            background: rgba(255, 255, 255, 0.98);
-        }
-        [data-testid="stMainBlockContainer"] {
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+        html, body, [data-testid="stAppViewContainer"], [class*="st-"] {{
+            font-family: "DM Sans", "Segoe UI", sans-serif;
+        }}
+        [data-testid="stAppViewContainer"] {{
+            background:
+                radial-gradient(1200px 500px at 10% -10%, #eef1ff 0%, transparent 55%),
+                radial-gradient(900px 420px at 100% 0%, #f5f7ff 0%, transparent 50%),
+                #ffffff;
+        }}
+        [data-testid="stHeader"] {{
+            background: rgba(255, 255, 255, 0.92);
+        }}
+        [data-testid="stMainBlockContainer"] {{
             width: min(900px, calc(100vw - 2rem)) !important;
             max-width: 900px !important;
             margin-left: auto !important;
             margin-right: auto !important;
             padding-top: 2.5rem !important;
             padding-bottom: 7.5rem !important;
-        }
-        [data-testid="stForm"] {
+        }}
+        [data-testid="stForm"] {{
             position: sticky;
             bottom: 0;
             z-index: 100;
             background: rgba(255, 255, 255, 0.98);
             padding: 0.65rem 0 0.35rem;
-            border-top: 1px solid #edf0ed;
-        }
-        [data-testid="stTextInput"] input {
+            border-top: 1px solid #e8ebf7;
+        }}
+        [data-testid="stTextInput"] input {{
             min-height: 48px;
             border-radius: 14px;
             padding-left: 16px;
-        }
-        [data-testid="stFormSubmitButton"] button {
+            border-color: #d8dcf0 !important;
+        }}
+        [data-testid="stFormSubmitButton"] button {{
             min-height: 48px;
             height: 48px;
             border-radius: 13px;
-            background: #079c68;
+            background: {GROWW_BLUE};
             color: #ffffff;
-            border: 1px solid #079c68;
-        }
-        [data-testid="stFormSubmitButton"] button:hover {
-            background: #067d55;
-            border-color: #067d55;
+            border: 1px solid {GROWW_BLUE};
+        }}
+        [data-testid="stFormSubmitButton"] button:hover {{
+            background: #4354e0;
+            border-color: #4354e0;
             color: #ffffff;
-        }
-        div[data-testid="stButton"] > button {
+        }}
+        div[data-testid="stButton"] > button {{
             width: 100%;
             min-height: 64px;
             height: auto !important;
@@ -503,33 +557,51 @@ def _inject_ui_styles() -> None:
             align-items: flex-start;
             justify-content: flex-start;
             padding: 14px 16px;
-            border: 1px solid #e1e6e2;
+            border: 1px solid #e2e6f5;
             border-radius: 13px;
             background: #ffffff;
-            color: #17211c;
+            color: #1a1f36;
             font-size: 0.95rem;
             line-height: 1.45;
             box-shadow: none;
-        }
-        div[data-testid="stButton"] > button p {
+        }}
+        div[data-testid="stButton"] > button p {{
             white-space: normal !important;
             overflow-wrap: anywhere;
             word-break: break-word;
             text-align: left;
             margin: 0;
-        }
-        div[data-testid="stButton"] > button:hover {
-            border-color: #079c68;
-            color: #079c68;
-            background: #fbfefc;
-        }
-        div[data-testid="stButton"] > button:focus {
-            border-color: #079c68;
-            box-shadow: 0 0 0 1px #079c68;
-        }
-        div[data-testid="stChatInput"] textarea {
+        }}
+        div[data-testid="stButton"] > button:hover {{
+            border-color: {GROWW_BLUE};
+            color: {GROWW_BLUE};
+            background: #f7f8ff;
+        }}
+        div[data-testid="stButton"] > button:focus {{
+            border-color: {GROWW_BLUE};
+            box-shadow: 0 0 0 1px {GROWW_BLUE};
+        }}
+        div[data-testid="stChatInput"] textarea {{
             border-radius: 14px;
-        }
+        }}
+        .gf-badge {{
+            display: inline-block;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            padding: 6px 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background: #eef1ff;
+            color: {GROWW_BLUE};
+        }}
+        .gf-badge-answer {{ background: #eef1ff; color: {GROWW_BLUE}; }}
+        .gf-badge-refusal_advice,
+        .gf-badge-refusal_performance {{ background: #fff4e8; color: #9a5b12; }}
+        .gf-badge-not_in_sources {{ background: #f3f4f8; color: #4b5568; }}
+        .gf-badge-clarify {{ background: #e8f4ff; color: #1d6fb8; }}
+        .gf-badge-pii {{ background: #fdecef; color: #b42318; }}
+        .gf-badge-error {{ background: #fdecef; color: #b42318; }}
         </style>
         """
         ),
@@ -538,13 +610,13 @@ def _inject_ui_styles() -> None:
 
 
 def render_header() -> None:
-    """Render a spacious brand header with a GitHub link."""
+    """Render a spacious Groww brand header with a GitHub link."""
     brand, actions = st.columns([6.5, 1.8], vertical_alignment="center")
 
     with brand:
         st.markdown(
             dedent(
-                """
+                f"""
                 <div style="
                     display:flex;
                     align-items:center;
@@ -553,7 +625,7 @@ def render_header() -> None:
                     padding:22px 0;
                 ">
                     <div style="
-                        background:#079c68;
+                        background:{GROWW_BLUE};
                         color:#ffffff;
                         width:42px;
                         height:42px;
@@ -562,20 +634,20 @@ def render_header() -> None:
                         justify-content:center;
                         border-radius:10px;
                         font-weight:800;
-                        font-size:20px;
-                    ">H</div>
+                        font-size:18px;
+                    ">G</div>
                     <div style="line-height:1.4;">
                         <div style="
                             font-weight:800;
                             letter-spacing:.3px;
-                            color:#17211c;
+                            color:#1a1f36;
                             font-size:16px;
-                        ">HDFC MF FACTS</div>
+                        ">GROWW FUND FACTS</div>
                         <div style="
                             font-size:13px;
-                            color:#7b8491;
+                            color:#6b7289;
                             margin-top:3px;
-                        ">Mutual fund facts, made clear</div>
+                        ">Scheme facts from curated sources</div>
                     </div>
                 </div>
             """
@@ -598,8 +670,8 @@ def render_header() -> None:
                     font-size:12px;
                 ">
                     <span style="
-                        background:#e5f7ed;
-                        color:#087a4b;
+                        background:#eef1ff;
+                        color:{GROWW_BLUE};
                         padding:7px 12px;
                         border-radius:999px;
                         font-weight:700;
@@ -620,27 +692,28 @@ def render_header() -> None:
 
 
 def render_hero() -> None:
-    """Render the centered introduction from the supplied UI reference."""
+    """Render the centered Groww Fund Facts introduction."""
     st.markdown(
         dedent(
-            """
+            f"""
         <div style="max-width:700px;margin:30px auto 24px;text-align:center;">
-            <div style="color:#079c68;font-size:11px;font-weight:800;
+            <div style="color:{GROWW_BLUE};font-size:11px;font-weight:800;
                 letter-spacing:2px;margin-bottom:14px;">
-                YOUR MUTUAL FUND FACT DESK
+                GROWW FUND FACTS
             </div>
             <h1 style="font-size:42px;line-height:1.08;letter-spacing:-1.3px;
                 color:#101828;margin:0 0 12px;font-weight:750;">
-                Investing terms,<br>
-                <span style="color:#079c68;">made clearer.</span>
+                Scheme facts,<br>
+                <span style="color:{GROWW_BLUE};">cited clearly.</span>
             </h1>
-            <p style="font-size:16px;color:#737b88;margin:0 0 18px;">
-                Understand scheme documents and mutual-fund terms in plain language.
+            <p style="font-size:16px;color:#6b7289;margin:0 0 18px;">
+                Exit load, TER, SIP minimums, lock-in, riskometer, and benchmarks
+                from Groww pages plus official HDFC AMC, SEBI, and AMFI sources.
             </p>
             <div style="display:inline-block;padding:12px 16px;
-                background:#f3f7f5;border:1px solid #e1eae4;border-radius:12px;
+                background:#f7f8ff;border:1px solid #e2e6f5;border-radius:12px;
                 font-size:13px;color:#344054;">
-                Hi! Ask me facts about HDFC Mutual Fund schemes.
+                Hi! Ask me facts about HDFC schemes on Groww.
             </div>
         </div>
         """
@@ -653,7 +726,7 @@ def render_examples() -> None:
     """Render factual example questions in a fully readable two-column grid."""
     st.markdown("### Try asking")
     st.caption(
-        "Factual prompts with verified retrieval coverage."
+        "Factual prompts with verified retrieval coverage. Citations prefer Groww scheme pages."
     )
     questions = list(get_suggested_questions())[:8]
     for row_index in range(0, len(questions), 2):
@@ -677,10 +750,10 @@ def render_empty_answer_state() -> None:
             """
         <div style="text-align:center;padding:28px 12px 16px;">
             <div style="width:34px;height:34px;margin:0 auto 8px;
-                border:1px solid #e1eae4;border-radius:11px;
+                border:1px solid #e2e6f5;border-radius:11px;
                 display:flex;align-items:center;justify-content:center;">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
-                    stroke="#079c68" stroke-width="1.8" stroke-linecap="round"
+                    stroke="#5367FF" stroke-width="1.8" stroke-linecap="round"
                     stroke-linejoin="round" aria-hidden="true">
                     <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7
                         8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8
@@ -691,7 +764,7 @@ def render_empty_answer_state() -> None:
             <div style="font-weight:650;color:#344054;">
                 Your answer will appear here
             </div>
-            <div style="font-size:13px;color:#7b8491;margin-top:7px;">
+            <div style="font-size:13px;color:#6b7289;margin-top:7px;">
                 Choose an example above or type a question below.
             </div>
         </div>
@@ -702,7 +775,7 @@ def render_empty_answer_state() -> None:
 
 
 def main() -> None:
-    """Render HDFC MF Facts with persistent examples and multi-turn chat."""
+    """Render Groww Fund Facts with persistent examples and multi-turn chat."""
     _inject_ui_styles()
     render_header()
 
