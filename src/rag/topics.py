@@ -27,7 +27,12 @@ TOPIC_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ),
     (
         "riskometer",
-        re.compile(r"\brisk[\s-]*o[\s-]*meter\b|\briskometer\b", re.IGNORECASE),
+        re.compile(
+            r"\brisk[\s-]*o[\s-]*meter\b|\briskometer\b|"
+            # Groww fund pages often omit "riskometer" and say "Very High Risk".
+            r"(?:rated\s+)?(?:very\s+high|moderately\s+high|moderate|high|low)\s+risk\b",
+            re.IGNORECASE,
+        ),
     ),
     ("benchmark", re.compile(r"\bbenchmark(?:ing)?\b", re.IGNORECASE)),
     ("elss_lockin", re.compile(r"\block[\s-]*in\b|\blockin\b", re.IGNORECASE)),

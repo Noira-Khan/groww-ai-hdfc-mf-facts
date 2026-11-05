@@ -238,6 +238,62 @@ def test_retrieve_diversifies_selected_sources(config, monkeypatch):
     assert selected_sources == ["page", "kim", "sid"]
 
 
+def test_retrieve_prefers_groww_risk_phrasing_over_empty_groww(config, monkeypatch):
+    """Groww pages often say 'Very High Risk' without the word riskometer."""
+    config.retrieval.max_context_chunks = 5
+    _install(
+        monkeypatch,
+        [
+            _row(
+                "groww_noise",
+                0.20,
+                "Invest in stocks, ETFs, IPOs with fast orders. Track returns.",
+                source_id="groww_elss_page",
+                doc_type="groww_page",
+                publisher="Groww",
+                scheme="elss",
+                topic="general",
+                section="Nav",
+                url="https://groww.in/mutual-funds/hdfc-elss-tax-saver-fund-direct-plan-growth",
+            ),
+            _row(
+                "hdfc_value",
+                0.22,
+                "Riskometer: Very High",
+                source_id="hdfc_elss_page",
+                doc_type="scheme_page",
+                publisher="HDFC AMC",
+                scheme="elss",
+                topic="riskometer",
+                section="Riskometer",
+                url="https://www.hdfcfund.com/explore/mutual-funds/hdfc-elss-tax-saver-fund/direct",
+            ),
+            _row(
+                "groww_value",
+                0.24,
+                "HDFC ELSS Tax Saver Fund Direct Plan Growth is rated Very High risk.",
+                source_id="groww_elss_page",
+                doc_type="groww_page",
+                publisher="Groww",
+                scheme="elss",
+                topic="riskometer",
+                section="Fund details",
+                url="https://groww.in/mutual-funds/hdfc-elss-tax-saver-fund-direct-plan-growth",
+            ),
+        ],
+    )
+
+    result = retrieve(
+        config,
+        "What is the riskometer of HDFC ELSS Tax Saver?",
+        scheme="elss",
+        model=FakeModel(),
+    )
+
+    assert result.chunks[0].chunk_id == "groww_value"
+    assert "groww_noise" not in {chunk.chunk_id for chunk in result.chunks}
+
+
 def test_retrieve_prefers_value_bearing_riskometer_chunk(config, monkeypatch):
     config.retrieval.max_context_chunks = 5
     _install(

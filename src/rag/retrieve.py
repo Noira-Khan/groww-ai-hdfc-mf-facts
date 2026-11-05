@@ -35,7 +35,11 @@ TOPIC_VALUE_PATTERNS: dict[str, re.Pattern[str]] = {
         r"(?:risk[\s-]*o?[\s-]*meter|riskometer)\s*[:\-]?\s*"
         r"(very\s+high|moderately\s+high|moderate|high|low)"
         r"|(?:very\s+high|moderately\s+high|moderate|high|low)\s+"
-        r"(?:on\s+the\s+)?(?:risk[\s-]*o?[\s-]*meter|riskometer)",
+        r"(?:on\s+the\s+)?(?:risk[\s-]*o?[\s-]*meter|riskometer)"
+        # Groww scheme pages often say "Very High Risk" / "rated Very High risk"
+        # without the word "riskometer".
+        r"|(?:rated\s+)?(very\s+high|moderately\s+high|moderate|high|low)\s+risk\b"
+        r"|\b(very\s+high|moderately\s+high|moderate|high|low)\s+risk\b",
         re.IGNORECASE,
     ),
     "benchmark": re.compile(
@@ -216,8 +220,11 @@ def _topic_doc_boost(chunk: RetrievedChunk, detected_topic: str | None) -> float
         return 0.0
     doc_type = chunk.metadata.get("doc_type")
     if doc_type == "groww_page" and doc_type in preferred:
-        # Prefer Groww scheme pages so citations open in Groww.
-        return TOPIC_DOC_BOOST + 0.08
+        # Prefer Groww citations only when the chunk actually carries the fact.
+        # Empty/noisy Groww scrapes must not outrank HDFC/SEBI/AMFI evidence.
+        if _has_topic_value(chunk, detected_topic):
+            return TOPIC_DOC_BOOST + 0.08
+        return 0.0
     if doc_type in preferred:
         return TOPIC_DOC_BOOST
     return 0.0
@@ -299,7 +306,7 @@ def _select_context(
 
     topic_hits = [chunk for chunk in chunks if _matches_topic(chunk, detected_topic)]
     valued_hits = [
-        chunk for chunk in topic_hits if _has_topic_value(chunk, detected_topic)
+        chunk for chunk in chunks if _has_topic_value(chunk, detected_topic)
     ]
     preferred_valued = [
         chunk
@@ -411,6 +418,9 @@ def retrieve(
                     chunk.score += FACT_VALUE_BOOST
                 else:
                     chunk.score -= WEAK_TOPIC_PENALTY
+            elif _has_topic_value(chunk, detected_topic):
+                # Value present without the topic keyword (e.g. Groww "Very High Risk").
+                chunk.score += FACT_VALUE_BOOST
 
     candidates.sort(key=lambda chunk: chunk.score, reverse=True)
     before_dedupe = len(candidates)
